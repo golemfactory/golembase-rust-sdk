@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["golem_base_sdk",[["impl&lt;N&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.84.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"golem_base_sdk/resilient_provider/struct.ResilientProvider.html\" title=\"struct golem_base_sdk::resilient_provider::ResilientProvider\">ResilientProvider</a>&lt;N&gt;&gt; for DynProvider&lt;N&gt;<div class=\"where\">where\n    N: Network,</div>"],["impl&lt;N&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.84.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;DynProvider&lt;N&gt;&gt; for <a class=\"struct\" href=\"golem_base_sdk/resilient_provider/struct.ResilientProvider.html\" title=\"struct golem_base_sdk::resilient_provider::ResilientProvider\">ResilientProvider</a>&lt;N&gt;<div class=\"where\">where\n    N: Network,</div>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[878]}

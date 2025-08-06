@@ -1,0 +1,1 @@
+searchState.loadedDescShard("golem_base_test_utils", 0, "Default URL for GolemBase node in tests\nDefault TTL value for test entities\nRemoves all existing entities from the GolemBase node\nCreates a new test account with initial funding\nInitializes the logger for tests")
