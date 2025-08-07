@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["GOLEM_BASE_URL","TEST_TTL"],"fn":["cleanup_entities","create_test_account","init_logger"]};
+window.SIDEBAR_ITEMS = {"constant":["GOLEM_BASE_URL","TEST_TTL"],"fn":["cleanup_entities","create_test_account","find_entry_creation_transaction","init_logger"],"mod":["golembase"]};

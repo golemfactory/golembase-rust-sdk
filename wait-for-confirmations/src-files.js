@@ -1,3 +1,3 @@
-var srcIndex = new Map(JSON.parse('[["golem_base_sdk",["",[],["account.rs","client.rs","entity.rs","eth.rs","events.rs","lib.rs","resilient_provider.rs","rpc.rs","signers.rs","utils.rs"]]],["golem_base_sdk_api",["",[],["api.rs","main.rs"]]],["golem_base_sdk_cli",["",[],["main.rs"]]],["golem_base_sdk_demo",["",[],["main.rs"]]],["golem_base_test_utils",["",[],["lib.rs"]]]]'));
+var srcIndex = new Map(JSON.parse('[["golem_base_sdk",["",[],["account.rs","client.rs","entity.rs","eth.rs","events.rs","lib.rs","resilient_provider.rs","rpc.rs","signers.rs","utils.rs"]]],["golem_base_sdk_api",["",[],["api.rs","main.rs"]]],["golem_base_sdk_cli",["",[],["main.rs"]]],["golem_base_sdk_demo",["",[],["main.rs"]]],["golem_base_test_utils",["",[],["golembase.rs","lib.rs"]]]]'));
 createSrcSidebar();
-//{"start":36,"fragment_lengths":[152,52,43,44,45]}
+//{"start":36,"fragment_lengths":[152,52,43,44,60]}

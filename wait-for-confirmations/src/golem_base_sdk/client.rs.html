@@ -567,7 +567,11 @@
 <a href="#566" id="566">566</a>
 <a href="#567" id="567">567</a>
 <a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::sync::{Arc, RwLock};
 <span class="kw">use </span>std::time::{Duration, Instant};
@@ -576,7 +580,7 @@
 <span class="kw">use </span>alloy::primitives::{Address, B256};
 <span class="kw">use </span>alloy::providers::{Provider, ProviderBuilder};
 <span class="kw">use </span>alloy::rpc::client::ClientRef;
-<span class="kw">use </span>alloy::rpc::types::{SyncStatus, TransactionReceipt};
+<span class="kw">use </span>alloy::rpc::types::{Log, SyncStatus, TransactionReceipt};
 <span class="kw">use </span>alloy::signers::local::PrivateKeySigner;
 <span class="kw">use </span>alloy::transports::http::reqwest::Url;
 <span class="kw">use </span>bigdecimal::BigDecimal;
@@ -979,9 +983,16 @@
         }
 
         <span class="comment">// Parse logs to get entity ID
-        </span><span class="kw">let </span>entity_id = receipt
-            .logs()
-            .iter()
+        </span><span class="kw">let </span>entity_id = <span class="self">Self</span>::extract_entity_id(receipt.logs())<span class="question-mark">?</span>;
+
+        <span class="macro">log::debug!</span>(<span class="string">"Created entity with ID: 0x{:x}"</span>, entity_id);
+        <span class="prelude-val">Ok</span>(entity_id)
+    }
+
+    <span class="doccomment">/// Extracts entity ID from transaction logs by looking for GolemBaseStorageEntityCreated events.
+    /// Returns the entity ID if found, or an error if not found.
+    </span><span class="kw">pub fn </span>extract_entity_id(logs: <span class="kw-2">&amp;</span>[Log]) -&gt; anyhow::Result&lt;Hash&gt; {
+        logs.iter()
             .inspect(|log| <span class="macro">log::trace!</span>(<span class="string">"Log: {:?}"</span>, log))
             .find_map(|log| {
                 <span class="kw">if </span>log.topics().len() &gt;= <span class="number">2 </span>&amp;&amp; log.topics()[<span class="number">0</span>] == golem_base_storage_entity_created()
@@ -992,10 +1003,7 @@
                     <span class="prelude-val">None
                 </span>}
             })
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"No entity ID found in transaction logs"</span>))<span class="question-mark">?</span>;
-
-        <span class="macro">log::debug!</span>(<span class="string">"Created entity with ID: 0x{:x}"</span>, entity_id);
-        <span class="prelude-val">Ok</span>(entity_id)
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"No entity ID found in transaction logs"</span>))
     }
 
     <span class="doccomment">/// Removes entries from GolemBase.
