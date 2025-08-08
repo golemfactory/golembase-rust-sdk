@@ -1,1 +1,0 @@
-searchState.loadedDescShard("golem_base_test_utils", 0, "Default URL for GolemBase node in tests\nDefault TTL value for test entities")

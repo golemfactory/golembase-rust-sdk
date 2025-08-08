@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["GolemBaseClient","GolemBaseClientBuilder","GolemBaseRoClient","GolemBaseRoClientBuilder","NonceManager"]};
+window.SIDEBAR_ITEMS = {"struct":["GolemBaseClient","GolemBaseClientBuilder","NonceManager","TransactionConfig"]};

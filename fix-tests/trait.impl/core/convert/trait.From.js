@@ -1,9 +1,0 @@
-(function() {
-    var implementors = Object.fromEntries([["golem_base_sdk",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;&amp;<a class=\"struct\" href=\"golem_base_sdk/eth/GolemBaseABI/struct.GolemBaseStorageEntityBTLExtended.html\" title=\"struct golem_base_sdk::eth::GolemBaseABI::GolemBaseStorageEntityBTLExtended\">GolemBaseStorageEntityBTLExtended</a>&gt; for LogData"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;&amp;<a class=\"struct\" href=\"golem_base_sdk/eth/GolemBaseABI/struct.GolemBaseStorageEntityCreated.html\" title=\"struct golem_base_sdk::eth::GolemBaseABI::GolemBaseStorageEntityCreated\">GolemBaseStorageEntityCreated</a>&gt; for LogData"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;&amp;<a class=\"struct\" href=\"golem_base_sdk/eth/GolemBaseABI/struct.GolemBaseStorageEntityDeleted.html\" title=\"struct golem_base_sdk::eth::GolemBaseABI::GolemBaseStorageEntityDeleted\">GolemBaseStorageEntityDeleted</a>&gt; for LogData"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.87.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;&amp;<a class=\"struct\" href=\"golem_base_sdk/eth/GolemBaseABI/struct.GolemBaseStorageEntityUpdated.html\" title=\"struct golem_base_sdk::eth::GolemBaseABI::GolemBaseStorageEntityUpdated\">GolemBaseStorageEntityUpdated</a>&gt; for LogData"]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":57,"fragment_lengths":[1580]}

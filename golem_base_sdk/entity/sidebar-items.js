@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Annotation","Create","DeleteResult","EncodableGolemBaseTransaction","Entity","EntityResult","Extend","ExtendResult","GolemBaseTransaction","GolemBaseTransactionBuilder","TransactionResult","Update"],"type":["GolemBaseDelete","Hash","Key","NumericAnnotation","StringAnnotation"]};
+window.SIDEBAR_ITEMS = {"struct":["Annotation","Create","DeleteResult","Entity","EntityResult","Extend","ExtendResult","GolemBaseTransaction","Update"],"type":["GolemBaseDelete","Hash","Key","NumericAnnotation","StringAnnotation"]};

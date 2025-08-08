@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["keccak256"],"mod":["client","entity","eth","events","rpc","utils"],"struct":["Address","Signature","Url"],"type":["PrivateKeySigner"]};
+window.SIDEBAR_ITEMS = {"fn":["keccak256"],"mod":["account","client","entity","eth","events","resilient_provider","rpc","signers","utils"],"struct":["Address","Signature","Url"],"type":["PrivateKeySigner"]};
