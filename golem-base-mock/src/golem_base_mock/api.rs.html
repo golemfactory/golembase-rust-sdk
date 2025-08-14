@@ -106,15 +106,11 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, Bytes, B256, U256};
+<a href="#108" id="108">108</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, Bytes, B256, U256};
 <span class="kw">use </span>alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Transaction, TransactionReceipt, TransactionRequest,
 };
+<span class="kw">use </span>golem_base_sdk::rpc::SearchResult;
 <span class="kw">use </span>jsonrpsee::core::RpcResult;
 <span class="kw">use </span>jsonrpsee::proc_macros::rpc;
 
@@ -194,9 +190,6 @@
     <span class="attr">#[method(name = <span class="string">"getEntity"</span>)]
     </span><span class="kw">async fn </span>get_entity(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt;;
 
-    <span class="attr">#[method(name = <span class="string">"search"</span>)]
-    </span><span class="kw">async fn </span>search(<span class="kw-2">&amp;</span><span class="self">self</span>, query: serde_json::Value) -&gt; RpcResult&lt;Vec&lt;serde_json::Value&gt;&gt;;
-
     <span class="attr">#[method(name = <span class="string">"getEntityMetadata"</span>)]
     </span><span class="kw">async fn </span>get_entity_metadata(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt;;
 
@@ -207,16 +200,13 @@
     </span><span class="kw">async fn </span>get_all_entity_keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt;;
 
     <span class="attr">#[method(name = <span class="string">"getEntitiesOfOwner"</span>)]
-    </span><span class="kw">async fn </span>get_entities_of_owner(<span class="kw-2">&amp;</span><span class="self">self</span>, addresses: Vec&lt;Address&gt;) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt;;
+    </span><span class="kw">async fn </span>get_entities_of_owner(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt;;
 
     <span class="attr">#[method(name = <span class="string">"getStorageValue"</span>)]
-    </span><span class="kw">async fn </span>get_storage_value(<span class="kw-2">&amp;</span><span class="self">self</span>, keys: Vec&lt;B256&gt;) -&gt; RpcResult&lt;String&gt;;
+    </span><span class="kw">async fn </span>get_storage_value(<span class="kw-2">&amp;</span><span class="self">self</span>, keys: B256) -&gt; RpcResult&lt;String&gt;;
 
     <span class="attr">#[method(name = <span class="string">"queryEntities"</span>)]
-    </span><span class="kw">async fn </span>query_entities(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        queries: Vec&lt;String&gt;,
-    ) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;serde_json::Value&gt;&gt;&gt;;
+    </span><span class="kw">async fn </span>query_entities(<span class="kw-2">&amp;</span><span class="self">self</span>, query: String) -&gt; RpcResult&lt;Vec&lt;SearchResult&gt;&gt;;
 
     <span class="attr">#[method(name = <span class="string">"getEntitiesToExpireAtBlock"</span>)]
     </span><span class="kw">async fn </span>get_entities_to_expire_at_block(

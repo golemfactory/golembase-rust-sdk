@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["api","block","blockchain","entity_db","execution","managed_accounts","server","transaction_pool"],"struct":["GolemBaseMock","GolemBaseMockServer"]};
+window.SIDEBAR_ITEMS = {"mod":["api","block","blockchain","entity_db","execution","managed_accounts","query_parser","server","transaction_pool"],"struct":["GolemBaseMock","GolemBaseMockServer"]};

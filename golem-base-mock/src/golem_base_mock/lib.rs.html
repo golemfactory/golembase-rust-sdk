@@ -570,7 +570,37 @@
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
 <a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     Eip658Value, EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEip4844,
     TxEip4844Variant,
 };
@@ -582,6 +612,7 @@
     Block, BlockId, BlockNumberOrTag, Log, Transaction, TransactionReceipt, TransactionRequest,
 };
 <span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>base64::{engine::general_purpose::STANDARD <span class="kw">as </span>BASE64, Engine};
 <span class="kw">use </span>jsonrpsee::core::{async_trait, RpcResult};
 <span class="kw">use </span>jsonrpsee::server::{RpcModule, Server};
 <span class="kw">use </span>jsonrpsee::types::{ErrorCode, ErrorObject};
@@ -595,6 +626,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::execution::ExecutionEngine;
 <span class="kw">use </span><span class="kw">crate</span>::managed_accounts::ManagedAccounts;
 <span class="kw">use </span><span class="kw">crate</span>::transaction_pool::TransactionPool;
+<span class="kw">use </span>golem_base_sdk::rpc::{EntityMetaData, SearchResult};
 
 <span class="kw">pub mod </span>api;
 <span class="kw">pub mod </span>block;
@@ -602,6 +634,7 @@
 <span class="kw">pub mod </span>entity_db;
 <span class="kw">pub mod </span>execution;
 <span class="kw">pub mod </span>managed_accounts;
+<span class="kw">pub mod </span>query_parser;
 <span class="kw">pub mod </span>server;
 <span class="kw">pub mod </span>transaction_pool;
 
@@ -1016,63 +1049,89 @@
 
 <span class="attr">#[async_trait]
 </span><span class="kw">impl </span>GolemBaseRpcServer <span class="kw">for </span>GolemBaseMock {
-    <span class="kw">async fn </span>get_entity(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt; {
-        <span class="comment">// Mock implementation - return None for now
-        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+    <span class="kw">async fn </span>get_entity(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.entity_db
+            .get_entity(<span class="kw-2">&amp;</span>key)
+            .<span class="kw">await
+            </span>.map(|entity| {
+                serde_json::to_value(entity).map_err(|e| {
+                    create_error(
+                        ErrorCode::InternalError,
+                        <span class="macro">format!</span>(<span class="string">"Failed to serialize entity: {}"</span>, e),
+                    )
+                })
+            })
+            .transpose()<span class="question-mark">?</span>)
     }
 
-    <span class="kw">async fn </span>search(<span class="kw-2">&amp;</span><span class="self">self</span>, _query: serde_json::Value) -&gt; RpcResult&lt;Vec&lt;serde_json::Value&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty search results
-        </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
-    }
-
-    <span class="kw">async fn </span>get_entity_metadata(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty metadata
-        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
-            <span class="string">"expires_at_block"</span>: null,
-            <span class="string">"payload"</span>: null,
-            <span class="string">"string_annotations"</span>: [],
-            <span class="string">"numeric_annotations"</span>: [],
-            <span class="string">"owner"</span>: <span class="string">"0x0000000000000000000000000000000000000000"
-        </span>})))
+    <span class="kw">async fn </span>get_entity_metadata(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.entity_db
+            .get_entity(<span class="kw-2">&amp;</span>key)
+            .<span class="kw">await
+            </span>.map(|entity| {
+                <span class="kw">let </span>metadata = EntityMetaData::from(<span class="kw-2">&amp;</span>entity);
+                serde_json::to_value(metadata).map_err(|e| {
+                    create_error(
+                        ErrorCode::InternalError,
+                        <span class="macro">format!</span>(<span class="string">"Failed to serialize entity metadata: {}"</span>, e),
+                    )
+                })
+            })
+            .transpose()<span class="question-mark">?</span>)
     }
 
     <span class="kw">async fn </span>get_entity_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;u64&gt; {
-        <span class="comment">// Mock implementation - return 0 for now
-        </span><span class="prelude-val">Ok</span>(<span class="number">0</span>)
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.entity_db.count().<span class="kw">await as </span>u64)
     }
 
     <span class="kw">async fn </span>get_all_entity_keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty list
-        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]))
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.entity_db.get_all_keys().<span class="kw">await</span>))
     }
 
-    <span class="kw">async fn </span>get_entities_of_owner(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _addresses: Vec&lt;Address&gt;,
-    ) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty list
-        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]))
+    <span class="kw">async fn </span>get_entities_of_owner(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt; {
+        <span class="comment">// Use the owner index to efficiently get entities by owner
+        </span><span class="kw">let </span>keys = <span class="self">self</span>.entity_db.get_entities_by_owner(<span class="kw-2">&amp;</span>address).<span class="kw">await</span>;
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(keys))
     }
 
-    <span class="kw">async fn </span>get_storage_value(<span class="kw-2">&amp;</span><span class="self">self</span>, _keys: Vec&lt;B256&gt;) -&gt; RpcResult&lt;String&gt; {
-        <span class="comment">// Mock implementation - return empty base64 encoded string
-        </span><span class="prelude-val">Ok</span>(<span class="string">""</span>.to_string())
+    <span class="kw">async fn </span>get_storage_value(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;String&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(entity) = <span class="self">self</span>.entity_db.get_entity(<span class="kw-2">&amp;</span>key).<span class="kw">await </span>{
+            <span class="kw">let </span>encoded = BASE64.encode(<span class="kw-2">&amp;</span>entity.data);
+            <span class="prelude-val">Ok</span>(encoded)
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(create_error(
+                ErrorCode::InvalidParams,
+                <span class="macro">format!</span>(<span class="string">"Entity not found for key: 0x{:x}"</span>, key),
+            ))
+        }
     }
 
-    <span class="kw">async fn </span>query_entities(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _queries: Vec&lt;String&gt;,
-    ) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;serde_json::Value&gt;&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty list
-        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]))
+    <span class="kw">async fn </span>query_entities(<span class="kw-2">&amp;</span><span class="self">self</span>, query: String) -&gt; RpcResult&lt;Vec&lt;SearchResult&gt;&gt; {
+        <span class="kw">let </span>entities = <span class="self">self</span>.entity_db.query_entities(<span class="kw-2">&amp;</span>query).<span class="kw">await</span>.map_err(|e| {
+            create_error(
+                ErrorCode::InvalidParams,
+                <span class="macro">format!</span>(<span class="string">"Query parsing failed: {}"</span>, e),
+            )
+        })<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>results: Vec&lt;SearchResult&gt; = entities
+            .into_iter()
+            .map(|entity| SearchResult {
+                key: entity.key,
+                value: entity.data,
+            })
+            .collect();
+        <span class="prelude-val">Ok</span>(results)
     }
 
     <span class="kw">async fn </span>get_entities_to_expire_at_block(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         _block_number: u64,
     ) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;B256&gt;&gt;&gt; {
-        <span class="comment">// Mock implementation - return empty list
+        <span class="comment">// For now, return empty list since the EntityDb doesn't track expiration blocks
+        // In a real implementation, you'd want to add an expiration index to the EntityDb
         </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]))
     }
 }
@@ -1088,7 +1147,8 @@
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>GolemBaseMockServer {
     <span class="kw">pub </span>state: GolemBaseMock,
-    server: <span class="prelude-ty">Option</span>&lt;jsonrpsee::server::ServerHandle&gt;,
+    <span class="attr">#[allow(dead_code)]
+    </span>server: <span class="prelude-ty">Option</span>&lt;jsonrpsee::server::ServerHandle&gt;,
 }
 
 <span class="kw">impl </span>GolemBaseMockServer {

@@ -236,7 +236,7 @@
 
 <span class="doccomment">/// Represents a single search result from a query.
 /// Contains the entity key and the value (decoded from base64).
-</span><span class="attr">#[derive(Debug, Serialize, Deserialize)]
+</span><span class="attr">#[derive(Clone, Debug, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>SearchResult {
     <span class="attr">#[serde(rename = <span class="string">"key"</span>)]
     </span><span class="kw">pub </span>key: Hash,
