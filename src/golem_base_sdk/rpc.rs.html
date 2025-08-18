@@ -186,12 +186,9 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::Address;
-<span class="kw">use </span>alloy::providers::Provider;
+<a href="#188" id="188">188</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::Address;
 <span class="kw">use </span>alloy::rpc::json_rpc::{RpcRecv, RpcSend};
-<span class="kw">use </span>alloy_json_rpc::RpcError;
+<span class="kw">use </span>alloy_json_rpc::RpcError <span class="kw">as </span>AlloyError;
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>base64::{engine::general_purpose::STANDARD <span class="kw">as </span>BASE64, Engine};
 <span class="kw">use </span>bytes::Bytes;
@@ -201,6 +198,7 @@
 <span class="kw">use </span>std::fmt::Debug;
 <span class="kw">use </span>thiserror::Error;
 
+<span class="kw">use </span><span class="kw">crate</span>::resilient_provider::RpcError;
 <span class="kw">use crate</span>::{GolemBaseClient, Hash, NumericAnnotation, StringAnnotation};
 
 <span class="doccomment">/// Represents errors that can occur in the GolemBase RPC module.
@@ -277,19 +275,17 @@
         <span class="kw">let </span>method = method.into();
         <span class="macro">log::debug!</span>(<span class="string">"RPC Call - Method: {}, Params: {:?}"</span>, method, params);
         <span class="self">self</span>.provider
-            .inner()
-            .client()
             .request(method.clone(), params)
             .<span class="kw">await
             </span>.inspect(|res| <span class="macro">log::debug!</span>(<span class="string">"RPC Response: {:?}"</span>, res))
             .map_err(|e| <span class="kw">match </span>e {
-                RpcError::ErrorResp(err) =&gt; {
-                    <span class="macro">anyhow!</span>(<span class="string">"Error response from RPC service: {}"</span>, err)
+                RpcError::Original(AlloyError::ErrorResp(err)) =&gt; {
+                    <span class="macro">anyhow!</span>(<span class="string">"Error response from RPC service: {err}"</span>)
                 }
-                RpcError::SerError(err) =&gt; {
+                RpcError::Original(AlloyError::SerError(err)) =&gt; {
                     <span class="macro">anyhow!</span>(<span class="string">"Serialization error: {err}"</span>)
                 }
-                RpcError::DeserError { err, text } =&gt; {
+                RpcError::Original(AlloyError::DeserError { err, text }) =&gt; {
                     <span class="macro">log::debug!</span>(<span class="string">"Deserialization error: {err}, response text: {text}"</span>);
                     <span class="macro">anyhow!</span>(<span class="string">"Deserialization error: {err}"</span>)
                 }

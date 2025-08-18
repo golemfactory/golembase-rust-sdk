@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create_entity","delete_entity","get_entities","init_routes","update_entity"]};

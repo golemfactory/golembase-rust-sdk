@@ -276,14 +276,114 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::eips::BlockNumberOrTag;
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::eips::BlockNumberOrTag;
 <span class="kw">use </span>alloy::network::{Ethereum, Network};
 <span class="kw">use </span>alloy::primitives::{Address, B256, U256};
 <span class="kw">use </span>alloy::providers::{
     DynProvider, PendingTransactionBuilder, PendingTransactionConfig, Provider,
 };
+<span class="kw">use </span>alloy::rpc::json_rpc::{RpcRecv, RpcSend};
 <span class="kw">use </span>alloy::rpc::types::SyncStatus;
+<span class="kw">use </span>alloy::transports::TransportErrorKind;
+<span class="kw">use </span>alloy_json_rpc::RpcError <span class="kw">as </span>AlloyRpcError;
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>thiserror::Error;
+
+<span class="doccomment">/// Wrapper error type that can hold both RPC errors and retry-specific errors.
+</span><span class="attr">#[derive(Debug, Error)]
+</span><span class="kw">pub enum </span>RpcError&lt;E&gt; {
+    <span class="doccomment">/// Original error from the underlying operation
+    </span><span class="attr">#[error(<span class="string">"{0}"</span>)]
+    </span>Original(E),
+    <span class="doccomment">/// Error sending request - can be retried
+    </span><span class="attr">#[error(<span class="string">"{operation} failed after {attempts} attempts with error sending request: {message}"</span>)]
+    </span>ErrorSendingRequest {
+        operation: String,
+        attempts: u32,
+        message: String,
+    },
+    <span class="doccomment">/// No backend is currently healthy - can be retried
+    </span><span class="attr">#[error(<span class="string">"{operation} failed after {elapsed_secs:.1}s with no backend healthy: {message}"</span>)]
+    </span>NoBackendHealthy {
+        operation: String,
+        elapsed_secs: f64,
+        message: String,
+    },
+}
+
+<span class="kw">impl</span>&lt;E&gt; From&lt;E&gt; <span class="kw">for </span>RpcError&lt;E&gt; {
+    <span class="kw">fn </span>from(err: E) -&gt; <span class="self">Self </span>{
+        RpcError::Original(err)
+    }
+}
 
 <span class="doccomment">/// Configuration for the resilient provider retry behavior.
 </span><span class="attr">#[derive(Clone, Debug)]
@@ -339,7 +439,11 @@
     }
 
     <span class="doccomment">/// Generic retry function that handles "error sending request" errors and "no backend is currently healthy" errors.
-    </span><span class="kw">async fn </span>retry&lt;T, F, Fut, E&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, operation_name: <span class="kw-2">&amp;</span>str, operation: F) -&gt; anyhow::Result&lt;T&gt;
+    </span><span class="kw">async fn </span>retry&lt;T, F, Fut, E&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        operation_name: <span class="kw-2">&amp;</span>str,
+        operation: F,
+    ) -&gt; std::result::Result&lt;T, RpcError&lt;E&gt;&gt;
     <span class="kw">where
         </span>F: Fn() -&gt; Fut,
         Fut: std::future::Future&lt;Output = std::result::Result&lt;T, E&gt;&gt;,
@@ -356,10 +460,11 @@
                 </span><span class="prelude-val">Err</span>(e) <span class="kw">if </span>e.to_string().contains(<span class="string">"error sending request"</span>) =&gt; {
                     attempts += <span class="number">1</span>;
                     <span class="kw">if </span>attempts &gt; <span class="self">self</span>.config.max_retries {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                            <span class="string">"{operation_name} failed after {} attempts with 'error sending request': {e}"</span>,
-                            <span class="self">self</span>.config.max_retries,
-                        ));
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(RpcError::ErrorSendingRequest {
+                            operation: operation_name.to_string(),
+                            attempts: <span class="self">self</span>.config.max_retries,
+                            message: e.to_string(),
+                        });
                     }
                     <span class="macro">log::debug!</span>(
                             <span class="string">"{operation_name} failed with 'error sending request' (attempt {attempts}/{}). Retrying..."</span>,
@@ -378,10 +483,11 @@
                         std::time::Duration::from_secs(<span class="self">self</span>.config.backend_health_timeout_secs);
 
                     <span class="kw">if </span>elapsed &gt;= timeout_duration {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                            <span class="string">"{operation_name} failed after {} seconds with 'no backend is currently healthy to serve traffic': {e}"</span>,
-                            <span class="self">self</span>.config.backend_health_timeout_secs,
-                        ));
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(RpcError::NoBackendHealthy {
+                            operation: operation_name.to_string(),
+                            elapsed_secs: elapsed.as_secs_f64(),
+                            message: e.to_string(),
+                        });
                     }
 
                     <span class="macro">log::debug!</span>(
@@ -395,45 +501,66 @@
                     .<span class="kw">await</span>;
                     <span class="kw">continue</span>;
                 }
-                <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"{e}"</span>)),
+                <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(RpcError::Original(e)),
             }
         }
     }
 
-    <span class="doccomment">/// Gets the transaction count (nonce) for an address with retry logic.
-    </span><span class="kw">pub async fn </span>get_transaction_count(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_transaction_count"</span>, || <span class="kw">async </span>{
-            <span class="self">self</span>.provider.get_transaction_count(address).<span class="kw">await
+    <span class="doccomment">/// Makes a JSON-RPC request with retry logic for "error sending request" errors.
+    /// This provides resilience against temporary network issues and RPC load balancing switches.
+    </span><span class="kw">pub async fn </span>request&lt;S: RpcSend, R: RpcRecv&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        method: <span class="kw">impl </span>Into&lt;Cow&lt;<span class="lifetime">'static</span>, str&gt;&gt;,
+        params: S,
+    ) -&gt; std::result::Result&lt;R, RpcError&lt;AlloyRpcError&lt;TransportErrorKind&gt;&gt;&gt; {
+        <span class="kw">let </span>method = method.into();
+        <span class="self">self</span>.retry(<span class="string">"rpc_request"</span>, || <span class="kw">async </span>{
+            <span class="self">self</span>.provider
+                .client()
+                .request(method.clone(), params.clone())
+                .<span class="kw">await
         </span>})
         .<span class="kw">await
     </span>}
+
+    <span class="doccomment">/// Gets the transaction count (nonce) for an address with retry logic.
+    </span><span class="kw">pub async fn </span>get_transaction_count(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_transaction_count"</span>, || <span class="kw">async </span>{
+                <span class="self">self</span>.provider.get_transaction_count(address).<span class="kw">await
+            </span>})
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets account nonce using the RPC get_proof method with retry logic.
     /// This returns the confirmed nonce (excluding pending transactions).
     </span><span class="kw">pub async fn </span>get_nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
         <span class="kw">let </span>address_clone = address;
-        <span class="self">self</span>.retry(<span class="string">"get_proof"</span>, <span class="kw">move </span>|| <span class="kw">async move </span>{
-            <span class="kw">match </span><span class="self">self</span>.provider.get_proof(address_clone, <span class="macro">vec!</span>[]).<span class="kw">await </span>{
-                <span class="prelude-val">Ok</span>(proof_response) =&gt; <span class="prelude-val">Ok</span>(proof_response.nonce),
-                <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to get proof: {}"</span>, e)),
-            }
-        })
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_proof"</span>, <span class="kw">move </span>|| <span class="kw">async move </span>{
+                <span class="kw">match </span><span class="self">self</span>.provider.get_proof(address_clone, <span class="macro">vec!</span>[]).<span class="kw">await </span>{
+                    <span class="prelude-val">Ok</span>(proof_response) =&gt; <span class="prelude-val">Ok</span>(proof_response.nonce),
+                    <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to get proof: {}"</span>, e)),
+                }
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets the balance for an address with retry logic.
     </span><span class="kw">pub async fn </span>get_balance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;U256&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_balance"</span>, || <span class="kw">async </span>{
-            <span class="self">self</span>.provider.get_balance(address).<span class="kw">await
-        </span>})
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_balance"</span>, || <span class="kw">async </span>{
+                <span class="self">self</span>.provider.get_balance(address).<span class="kw">await
+            </span>})
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets accounts with retry logic.
     </span><span class="kw">pub async fn </span>get_accounts(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Address&gt;&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_accounts"</span>, || <span class="self">self</span>.provider.get_accounts())
-            .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_accounts"</span>, || <span class="self">self</span>.provider.get_accounts())
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Sends a transaction with retry logic.
     </span><span class="kw">pub async fn </span>send_transaction(
@@ -441,64 +568,70 @@
         tx: N::TransactionRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;PendingTransactionBuilder&lt;N&gt;&gt; {
         <span class="kw">let </span>tx_clone = tx.clone();
-        <span class="self">self</span>.retry(<span class="string">"send_transaction"</span>, || {
-            <span class="self">self</span>.provider.send_transaction(tx_clone.clone())
-        })
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"send_transaction"</span>, || {
+                <span class="self">self</span>.provider.send_transaction(tx_clone.clone())
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Sends a raw transaction with retry logic.
     </span><span class="kw">pub async fn </span>send_raw_transaction(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;PendingTransactionBuilder&lt;N&gt;&gt; {
         <span class="kw">let </span>data = data.to_vec();
-        <span class="self">self</span>.retry(<span class="string">"send_raw_transaction"</span>, || {
-            <span class="self">self</span>.provider.send_raw_transaction(<span class="kw-2">&amp;</span>data)
-        })
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"send_raw_transaction"</span>, || {
+                <span class="self">self</span>.provider.send_raw_transaction(<span class="kw-2">&amp;</span>data)
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets a transaction by hash with retry logic.
     </span><span class="kw">pub async fn </span>get_transaction_by_hash(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         hash: alloy::primitives::B256,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;N::TransactionResponse&gt;&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_transaction_by_hash"</span>, || {
-            <span class="self">self</span>.provider.get_transaction_by_hash(hash)
-        })
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_transaction_by_hash"</span>, || {
+                <span class="self">self</span>.provider.get_transaction_by_hash(hash)
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets a transaction receipt with retry logic.
     </span><span class="kw">pub async fn </span>get_transaction_receipt(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         hash: alloy::primitives::B256,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;N::ReceiptResponse&gt;&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_transaction_receipt"</span>, || {
-            <span class="self">self</span>.provider.get_transaction_receipt(hash)
-        })
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_transaction_receipt"</span>, || {
+                <span class="self">self</span>.provider.get_transaction_receipt(hash)
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets the chain ID with retry logic.
     </span><span class="kw">pub async fn </span>get_chain_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_chain_id"</span>, || <span class="self">self</span>.provider.get_chain_id())
-            .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_chain_id"</span>, || <span class="self">self</span>.provider.get_chain_id())
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets the syncing status with retry logic.
     </span><span class="kw">pub async fn </span>syncing(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SyncStatus&gt; {
-        <span class="self">self</span>.retry(<span class="string">"syncing"</span>, || <span class="self">self</span>.provider.syncing()).<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.retry(<span class="string">"syncing"</span>, || <span class="self">self</span>.provider.syncing()).<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets a block by number with retry logic.
     </span><span class="kw">pub async fn </span>get_block_by_number(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         block: BlockNumberOrTag,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;N::BlockResponse&gt;&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_block_by_number"</span>, || <span class="kw">async </span>{
-            <span class="self">self</span>.provider.get_block_by_number(block).<span class="kw">await
-        </span>})
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_block_by_number"</span>, || <span class="kw">async </span>{
+                <span class="self">self</span>.provider.get_block_by_number(block).<span class="kw">await
+            </span>})
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Gets a transaction by sender address and nonce with retry logic.
     </span><span class="kw">pub async fn </span>get_transaction_by_sender_nonce(
@@ -506,13 +639,14 @@
         sender: Address,
         nonce: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;N::TransactionResponse&gt;&gt; {
-        <span class="self">self</span>.retry(<span class="string">"get_transaction_by_sender_nonce"</span>, || <span class="kw">async </span>{
-            <span class="self">self</span>.provider
-                .get_transaction_by_sender_nonce(sender, nonce)
-                .<span class="kw">await
-        </span>})
-        .<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.retry(<span class="string">"get_transaction_by_sender_nonce"</span>, || <span class="kw">async </span>{
+                <span class="self">self</span>.provider
+                    .get_transaction_by_sender_nonce(sender, nonce)
+                    .<span class="kw">await
+            </span>})
+            .<span class="kw">await</span><span class="question-mark">?</span>)
+    }
 
     <span class="doccomment">/// Watches a pending transaction and waits for the specified number of confirmations with retry logic.
     </span><span class="kw">pub async fn </span>watch_for_confirmation(<span class="kw-2">&amp;</span><span class="self">self</span>, tx_hash: B256, confirmations: u64) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {

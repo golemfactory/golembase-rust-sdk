@@ -1,9 +1,0 @@
-(function() {
-    var implementors = Object.fromEntries([["golem_base_sdk",[["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"golem_base_sdk/entity/struct.Entity.html\" title=\"struct golem_base_sdk::entity::Entity\">Entity</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"golem_base_sdk/entity/struct.EntityResult.html\" title=\"struct golem_base_sdk::entity::EntityResult\">EntityResult</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"golem_base_sdk/rpc/struct.EntityMetaData.html\" title=\"struct golem_base_sdk::rpc::EntityMetaData\">EntityMetaData</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"golem_base_sdk/rpc/struct.SearchResult.html\" title=\"struct golem_base_sdk::rpc::SearchResult\">SearchResult</a>"],["impl&lt;T&gt; <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"golem_base_sdk/entity/struct.Annotation.html\" title=\"struct golem_base_sdk::entity::Annotation\">Annotation</a>&lt;T&gt;<div class=\"where\">where\n    T: <a class=\"trait\" href=\"https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html\" title=\"trait serde::ser::Serialize\">Serialize</a>,</div>"]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":57,"fragment_lengths":[1695]}

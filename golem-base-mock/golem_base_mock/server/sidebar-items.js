@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create_test_mock_server","get_default_mock_server_url","get_mock_server_url","start_default_mock_server","start_mock_server"]};
