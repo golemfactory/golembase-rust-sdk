@@ -1,0 +1,3 @@
+var srcIndex = new Map(JSON.parse('[["golem_base_mock",["",[],["api.rs","block.rs","blockchain.rs","entity_db.rs","execution.rs","lib.rs","managed_accounts.rs","query_parser.rs","server.rs","transaction_pool.rs"]]],["golem_base_sdk",["",[],["account.rs","client.rs","entity.rs","eth.rs","events.rs","lib.rs","resilient_provider.rs","rpc.rs","signers.rs","utils.rs"]]],["golem_base_sdk_api",["",[],["api.rs","main.rs"]]],["golem_base_sdk_cli",["",[],["main.rs"]]],["golem_base_sdk_demo",["",[],["main.rs"]]],["golem_base_test_utils",["",[],["golembase.rs","lib.rs"]]]]'));
+createSrcSidebar();
+//{"start":36,"fragment_lengths":[178,153,52,43,44,60]}

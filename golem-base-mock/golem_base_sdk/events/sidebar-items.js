@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Event"],"fn":["golem_base_storage_entity_created","golem_base_storage_entity_deleted","golem_base_storage_entity_ttl_extended","golem_base_storage_entity_updated"],"struct":["EventsClient"]};
