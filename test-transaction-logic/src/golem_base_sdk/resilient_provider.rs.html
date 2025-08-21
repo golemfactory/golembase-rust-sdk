@@ -335,18 +335,11 @@
 <a href="#334" id="334">334</a>
 <a href="#335" id="335">335</a>
 <a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
+<a href="#337" id="337">337</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span>alloy::eips::BlockNumberOrTag;
 <span class="kw">use </span>alloy::network::{Ethereum, Network};
-<span class="kw">use </span>alloy::primitives::{Address, B256, U256};
+<span class="kw">use </span>alloy::primitives::{Address, U256};
 <span class="kw">use </span>alloy::providers::{
     DynProvider, PendingTransactionBuilder, PendingTransactionConfig, Provider,
 };
@@ -647,14 +640,7 @@
     }
 
     <span class="doccomment">/// Watches a pending transaction and waits for the specified number of confirmations with retry logic.
-    </span><span class="kw">pub async fn </span>watch_for_confirmation(<span class="kw-2">&amp;</span><span class="self">self</span>, tx_hash: B256, confirmations: u64) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">if </span>confirmations == <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-        }
-
-        <span class="kw">let </span>config =
-            PendingTransactionConfig::new(tx_hash).with_required_confirmations(confirmations);
-
+    </span><span class="kw">pub async fn </span>watch_for_confirmation(<span class="kw-2">&amp;</span><span class="self">self</span>, config: PendingTransactionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span>pending_tx = <span class="self">self
             </span>.retry(<span class="string">"watch_pending_transaction"</span>, || <span class="kw">async </span>{
                 <span class="self">self</span>.provider

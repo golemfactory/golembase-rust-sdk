@@ -536,13 +536,49 @@
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     EthereumTxEnvelope, EthereumTypedTransaction, SignableTransaction, Signed, TxEip4844,
     TxEip4844Variant,
 };
 <span class="kw">use </span>alloy::hex;
 <span class="kw">use </span>alloy::network::TransactionBuilder;
 <span class="kw">use </span>alloy::primitives::{address, keccak256, Address, B256, U256};
+<span class="kw">use </span>alloy::providers::PendingTransactionConfig;
 <span class="kw">use </span>alloy::rpc::types::eth::TransactionRequest;
 <span class="kw">use </span>alloy::rpc::types::TransactionReceipt;
 <span class="kw">use </span>alloy_rlp::{Decodable, Encodable};
@@ -1016,61 +1052,95 @@
         <span class="macro">log::debug!</span>(<span class="string">"Transaction {tx_hash} wasn't send to seqencer properly. Caller should retry."</span>);
         <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
     }
+    <span class="kw">let _ </span>= wait_for_indexing(provider, tx_hash, timeout_duration).<span class="kw">await</span>;
 
     <span class="kw">loop </span>{
-        <span class="comment">// Check if we've exceeded the timeout
+        <span class="comment">// Recalculate timeout in case it decreased during retries
+        </span><span class="kw">let </span>elapsed = start_time.elapsed();
+        <span class="kw">let </span>remaining_timeout = timeout_duration.map(|timeout| timeout.saturating_sub(elapsed));
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(remaining_timeout) = remaining_timeout {
+            <span class="kw">if </span>remaining_timeout == Duration::ZERO {
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+            }
+        }
+
+        <span class="kw">let </span>config = PendingTransactionConfig::new(tx_hash)
+            .with_required_confirmations(confirmations)
+            .with_timeout(remaining_timeout);
+        provider
+            .watch_for_confirmation(config)
+            .<span class="kw">await
+            </span>.map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Failed watching for {tx_hash} confirmation: {e}"</span>))<span class="question-mark">?</span>;
+
+        <span class="kw">match </span>provider
+            .get_transaction_receipt(tx_hash)
+            .<span class="kw">await
+            </span>.map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Failed to get transaction receipt: {e}"</span>))<span class="question-mark">?
+        </span>{
+            <span class="prelude-val">Some</span>(receipt) =&gt; {
+                <span class="macro">log::info!</span>(
+                    <span class="string">"Transaction {tx_hash} was included in a block {:?} ({:?}). Waiting for {confirmations} confirmations."</span>,
+                    receipt.block_number,
+                    receipt.block_hash.map(|b| hex::encode(b))
+                );
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(receipt));
+            }
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="macro">log::trace!</span>(<span class="string">"Getting receipt returned None for transaction: {tx_hash}"</span>);
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(tx) = provider.get_transaction_by_hash(tx_hash).<span class="kw">await</span><span class="question-mark">? </span>{
+                    <span class="kw">if </span>tx.block_hash.is_some() {
+                        <span class="macro">log::debug!</span>(
+                        <span class="string">"Transaction {tx_hash} was already included in a block {:?} ({:?}), but receipt is not available."</span>,
+                        tx.block_number,
+                        tx.block_hash.map(|b| hex::encode(b))
+                    );
+                        <span class="macro">bail!</span>(<span class="string">"Transaction {tx_hash} was already included in a block, but we are not able to get the receipt."</span>);
+                    }
+                }
+
+                tokio::time::sleep(Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+                <span class="kw">continue</span>;
+            }
+        }
+    }
+}
+
+<span class="doccomment">/// Waits for transaction indexing to complete by retrying get_transaction_receipt calls.
+/// This function is workaround for problem with local GolemBase setup, which sometimes returns this
+/// error on the beginning. After initial period we shouldn't get this error again.
+</span><span class="kw">async fn </span>wait_for_indexing(
+    provider: <span class="kw-2">&amp;</span>ResilientProvider,
+    tx_hash: Hash,
+    timeout_duration: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;TransactionReceipt&gt;&gt; {
+    <span class="kw">let </span>start_time = std::time::Instant::now();
+
+    <span class="kw">loop </span>{
+        <span class="comment">// Check timeout
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(duration) = timeout_duration {
             <span class="kw">if </span>start_time.elapsed() &gt;= duration {
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
             }
         }
 
-        <span class="comment">// Must be checked before getting the receipt, to avoid race conditions.
-        </span><span class="kw">let </span>tx = provider.get_transaction_by_hash(tx_hash).<span class="kw">await</span><span class="question-mark">?</span>;
-
         <span class="kw">match </span>provider.get_transaction_receipt(tx_hash).<span class="kw">await </span>{
-            <span class="prelude-val">Ok</span>(opt_receipt) =&gt; <span class="kw">match </span>opt_receipt {
-                <span class="prelude-val">Some</span>(receipt) =&gt; {
-                    <span class="macro">log::info!</span>(
-                        <span class="string">"Transaction {tx_hash} was included in a block {:?} ({:?}). Waiting for {confirmations} confirmations."</span>,
-                        receipt.block_number,
-                        receipt.block_hash.map(|b| hex::encode(b))
-                    );
-                    provider
-                        .watch_for_confirmation(tx_hash, confirmations)
-                        .<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(receipt));
-                }
-                <span class="kw">_ </span>=&gt; {
-                    <span class="macro">log::trace!</span>(<span class="string">"Getting receipt returned None for transaction: {tx_hash}"</span>);
-
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(tx) = tx {
-                        <span class="kw">if </span>tx.block_hash.is_some() {
-                            <span class="macro">log::debug!</span>(
-                            <span class="string">"Transaction {tx_hash} was already included in a block {:?} ({:?}), but receipt is not available."</span>,
-                            tx.block_number,
-                            tx.block_hash.map(|b| hex::encode(b))
-                        );
-                            <span class="macro">bail!</span>(<span class="string">"Transaction {tx_hash} was already included in a block, but we are not able to get the receipt."</span>);
-                        }
-                    }
-
-                    tokio::time::sleep(tokio::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
-                    <span class="kw">continue</span>;
-                }
-            },
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(receipt)) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(receipt)),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+                <span class="comment">// Receipt not available yet, wait and retry
+                </span>tokio::time::sleep(Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+                <span class="kw">continue</span>;
+            }
             <span class="prelude-val">Err</span>(e)
                 <span class="kw">if </span>e.to_string()
                     .contains(<span class="string">"transaction indexing is in progress"</span>) =&gt;
             {
                 <span class="macro">log::debug!</span>(<span class="string">"Ignoring `indexing is in progress` error for transaction: {tx_hash}"</span>);
-                tokio::time::sleep(tokio::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+                tokio::time::sleep(Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
                 <span class="kw">continue</span>;
             }
-
-            <span class="prelude-val">Err</span>(e) =&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to get transaction receipt: {}"</span>, e));
-            }
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to get transaction receipt: {e}"</span>)),
         }
     }
 }
