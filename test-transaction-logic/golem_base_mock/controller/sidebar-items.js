@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["CallOverride","CallResponse","CallbackResult"],"struct":["EndpointCallback","MockController","WithCallback"]};
+window.SIDEBAR_ITEMS = {"enum":["CallOverride","CallResponse","CallbackResult"],"fn":["should_fail"],"struct":["EndpointCallback","MockController","WithCallback"]};

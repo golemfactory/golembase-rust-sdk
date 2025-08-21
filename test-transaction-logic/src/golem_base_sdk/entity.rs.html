@@ -509,7 +509,7 @@
     }
 
     <span class="doccomment">/// Creates a new `Create` request from any type that can be converted to `String`.
-    </span><span class="kw">pub fn </span>from_string&lt;T: Into&lt;String&gt;&gt;(payload: T, btl: u64) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>from_string(payload: <span class="kw">impl </span>Into&lt;String&gt;, btl: u64) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             btl,
             data: Bytes::from(payload.into().into_bytes()),

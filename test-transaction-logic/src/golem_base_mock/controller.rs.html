@@ -273,17 +273,26 @@
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::sync::{Arc, Mutex};
-
-<span class="doccomment">/// Channel buffer size for endpoint callbacks
-</span><span class="kw">const </span>CALLBACK_CHANNEL_SIZE: usize = <span class="number">50</span>;
+<span class="kw">use </span>tokio::sync::mpsc;
+<span class="kw">use </span>tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 <span class="doccomment">/// Identifier for global overrides that apply to all RPC calls
 </span><span class="kw">const </span>GLOBAL_OVERRIDE_KEY: <span class="kw-2">&amp;</span>str = <span class="string">"global"</span>;
-
-<span class="kw">use </span>tokio::sync::mpsc;
 
 <span class="doccomment">/// Result of waiting for an endpoint to be triggered
 </span><span class="attr">#[derive(Debug, Clone)]
@@ -296,7 +305,7 @@
 
 <span class="doccomment">/// Wrapper object that provides an await function to wait for endpoint trigger
 </span><span class="kw">pub struct </span>EndpointCallback {
-    receiver: mpsc::Receiver&lt;()&gt;,
+    receiver: UnboundedReceiver&lt;()&gt;,
 }
 
 <span class="kw">impl </span>EndpointCallback {
@@ -331,13 +340,13 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>WithCallback&lt;T: Display&gt; {
     <span class="kw">pub </span>response: T,
-    <span class="kw">pub </span>callback: <span class="prelude-ty">Option</span>&lt;mpsc::Sender&lt;()&gt;&gt;,
+    <span class="kw">pub </span>callback: <span class="prelude-ty">Option</span>&lt;UnboundedSender&lt;()&gt;&gt;,
     <span class="kw">pub </span>endpoint_name: String,
     <span class="kw">pub </span>call_count: usize,
 }
 
 <span class="kw">impl</span>&lt;T: Display&gt; WithCallback&lt;T&gt; {
-    <span class="kw">pub fn </span>new(response: T, sender: mpsc::Sender&lt;()&gt;, endpoint_name: String) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(response: T, sender: UnboundedSender&lt;()&gt;, endpoint_name: String) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             response,
             callback: <span class="prelude-val">Some</span>(sender),
@@ -370,7 +379,7 @@
                 <span class="self">self</span>.response
             );
 
-            <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = sender.try_send(()) {
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = sender.send(()) {
                 <span class="macro">log::error!</span>(<span class="string">"Failed to send callback for {}: {}"</span>, <span class="self">self</span>.endpoint_name, e);
             }
         }
@@ -391,7 +400,8 @@
                 <span class="comment">// Remove if count exceeded
                 </span><span class="self">self</span>.call_count &gt;= <span class="kw-2">*</span>n
             }
-        }
+            CallOverride::Always(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>, <span class="comment">// Always overrides are never outdated
+        </span>}
     }
 
     <span class="doccomment">/// Check if this override should be used
@@ -400,7 +410,8 @@
             CallOverride::Once(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
             CallOverride::Until { until, .. } =&gt; std::time::Instant::now() &lt; <span class="kw-2">*</span>until,
             CallOverride::NTimes { n, .. } =&gt; <span class="self">self</span>.call_count &lt; <span class="kw-2">*</span>n,
-        }
+            CallOverride::Always(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>, <span class="comment">// Always overrides are always used
+        </span>}
     }
 
     <span class="kw">pub fn </span>response(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CallResponse {
@@ -408,6 +419,7 @@
             CallOverride::Once(response) =&gt; response,
             CallOverride::Until { response, .. } =&gt; response,
             CallOverride::NTimes { response, .. } =&gt; response,
+            CallOverride::Always(response) =&gt; response,
         }
     }
 }
@@ -422,6 +434,10 @@
     /// This variant allows to capture the fact of calling the RPC. User code can
     /// wait for this event to happen in test or validate this fact as a condition for test to pass.
     </span>Success,
+    <span class="doccomment">/// RPC call will fail every Nth request based on the frequency value.
+    /// For example, frequency 3 means every 3rd request fails.
+    </span><span class="attr">#[display(<span class="string">"FailEachNth: {error} every {frequency} requests"</span>)]
+    </span>FailEachNth { error: String, frequency: usize },
 }
 
 <span class="attr">#[derive(Debug, derive_more::Display, Clone)]
@@ -435,6 +451,8 @@
     },
     <span class="attr">#[display(<span class="string">"Override: {n} times -&gt; {response}"</span>)]
     </span>NTimes { response: CallResponse, n: usize },
+    <span class="attr">#[display(<span class="string">"Override: always -&gt; {}"</span>, _0)]
+    </span>Always(CallResponse),
 }
 
 <span class="doccomment">/// Inner state of the mock controller
@@ -492,7 +510,7 @@
     </span><span class="kw">pub fn </span>global_override(<span class="kw-2">&amp;</span><span class="self">self</span>, rpc_override: CallOverride) -&gt; EndpointCallback {
         <span class="macro">log::debug!</span>(<span class="string">"Adding global override: {:?}"</span>, rpc_override);
 
-        <span class="kw">let </span>(sender, receiver) = mpsc::channel(CALLBACK_CHANNEL_SIZE);
+        <span class="kw">let </span>(sender, receiver) = mpsc::unbounded_channel();
         <span class="kw">let </span>overrides = WithCallback::new(rpc_override, sender, GLOBAL_OVERRIDE_KEY.to_string());
 
         <span class="kw">let </span><span class="kw-2">mut </span>lock = <span class="self">self</span>.inner.lock().unwrap();
@@ -509,7 +527,7 @@
     </span><span class="kw">pub fn </span>override_rpc(<span class="kw-2">&amp;</span><span class="self">self</span>, rpc_name: <span class="kw-2">&amp;</span>str, rpc_override: CallOverride) -&gt; EndpointCallback {
         <span class="macro">log::debug!</span>(<span class="string">"Adding RPC override for '{}': {:?}"</span>, rpc_name, rpc_override);
 
-        <span class="kw">let </span>(sender, receiver) = mpsc::channel(CALLBACK_CHANNEL_SIZE);
+        <span class="kw">let </span>(sender, receiver) = mpsc::unbounded_channel();
         <span class="kw">let </span>overrides = WithCallback::new(rpc_override, sender, rpc_name.to_string());
 
         <span class="kw">let </span><span class="kw-2">mut </span>lock = <span class="self">self</span>.inner.lock().unwrap();
@@ -548,4 +566,10 @@
         <span class="prelude-val">None
     </span>}
 }
+
+<span class="doccomment">/// Determines if a request should fail based on frequency
+/// For frequency 3, every 3rd request fails
+</span><span class="kw">pub fn </span>should_fail(frequency: usize, call_count: usize) -&gt; bool {
+    call_count &gt; <span class="number">0 </span>&amp;&amp; call_count % frequency == <span class="number">0
+</span>}
 </code></pre></div></section></main></body></html>

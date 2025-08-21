@@ -607,7 +607,14 @@
 <a href="#606" id="606">606</a>
 <a href="#607" id="607">607</a>
 <a href="#608" id="608">608</a>
-<a href="#609" id="609">609</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     Eip658Value, EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEip4844,
     TxEip4844Variant,
 };
@@ -626,7 +633,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::api::{EthRpcServer, GolemBaseRpcServer};
 <span class="kw">use </span><span class="kw">crate</span>::blockchain::Blockchain;
-<span class="kw">use </span><span class="kw">crate</span>::controller::{CallOverride, CallResponse, MockController, WithCallback};
+<span class="kw">use </span><span class="kw">crate</span>::controller::{should_fail, CallOverride, CallResponse, MockController, WithCallback};
 <span class="kw">use </span><span class="kw">crate</span>::entity_db::EntityDb;
 <span class="kw">use </span><span class="kw">crate</span>::execution::ExecutionEngine;
 <span class="kw">use </span><span class="kw">crate</span>::managed_accounts::ManagedAccounts;
@@ -715,6 +722,13 @@
                 // anything complicated afterwards.
                 </span>CallResponse::Error(err) =&gt; {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(create_error(ErrorCode::InternalError, err.to_string()));
+                }
+                <span class="comment">// FailEachNth response: return error based on frequency fraction
+                </span>CallResponse::FailEachNth { error, frequency } =&gt; {
+                    <span class="kw">if </span>should_fail(frequency, override_response.call_count) {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(create_error(ErrorCode::InternalError, error));
+                    }
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(override_response))
                 }
                 <span class="comment">// Caller should process normal logic, but we need to notify the client.
                 // We return WithCallback struct that will do this on drop.
