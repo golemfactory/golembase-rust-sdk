@@ -692,7 +692,21 @@
 <a href="#691" id="691">691</a>
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
-<a href="#694" id="694">694</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{keccak256, Address, B256};
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{keccak256, Address, B256};
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>base64::{engine::general_purpose::STANDARD <span class="kw">as </span>BASE64, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>bytes::Bytes;
@@ -700,6 +714,7 @@
 <span class="kw">use </span>golem_base_sdk::rpc::{serialize_base64, EntityMetaData, SearchResult};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
+<span class="kw">use </span>std::string::FromUtf8Error;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tokio::sync::RwLock;
 
@@ -803,6 +818,19 @@
             numeric_annotations: entity.numeric_annotations.clone(),
             owner: entity.owner,
         }
+    }
+}
+
+<span class="kw">impl </span>TryFrom&lt;Entity&gt; <span class="kw">for </span>golem_base_sdk::entity::Entity {
+    <span class="kw">type </span>Error = FromUtf8Error;
+
+    <span class="kw">fn </span>try_from(local_entity: Entity) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            data: String::from_utf8(local_entity.data.to_vec())<span class="question-mark">?</span>,
+            btl: local_entity.btl,
+            string_annotations: local_entity.string_annotations,
+            numeric_annotations: local_entity.numeric_annotations,
+        })
     }
 }
 

@@ -229,7 +229,7 @@
 
 <span class="doccomment">/// Type representing metadata for an entity.
 /// Contains information such as expiration, payload, annotations, and owner.
-</span><span class="attr">#[derive(Debug, Serialize, Deserialize)]
+</span><span class="attr">#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>EntityMetaData {
     <span class="doccomment">/// The block number at which the entity expires.

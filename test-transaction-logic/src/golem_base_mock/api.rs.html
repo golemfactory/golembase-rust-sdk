@@ -106,11 +106,13 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, Bytes, B256, U256};
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, Bytes, B256, U256};
 <span class="kw">use </span>alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Transaction, TransactionReceipt, TransactionRequest,
 };
-<span class="kw">use </span>golem_base_sdk::rpc::SearchResult;
+<span class="kw">use </span>golem_base_sdk::entity::Entity;
+<span class="kw">use </span>golem_base_sdk::rpc::{EntityMetaData, SearchResult};
 <span class="kw">use </span>jsonrpsee::core::RpcResult;
 <span class="kw">use </span>jsonrpsee::proc_macros::rpc;
 
@@ -188,10 +190,10 @@
 </span><span class="attr">#[rpc(server, namespace = <span class="string">"golembase"</span>)]
 </span><span class="kw">pub trait </span>GolemBaseRpc {
     <span class="attr">#[method(name = <span class="string">"getEntity"</span>)]
-    </span><span class="kw">async fn </span>get_entity(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt;;
+    </span><span class="kw">async fn </span>get_entity(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;Entity&gt;&gt;;
 
     <span class="attr">#[method(name = <span class="string">"getEntityMetaData"</span>)]
-    </span><span class="kw">async fn </span>get_entity_metadata(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;&gt;;
+    </span><span class="kw">async fn </span>get_entity_metadata(<span class="kw-2">&amp;</span><span class="self">self</span>, key: B256) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;EntityMetaData&gt;&gt;;
 
     <span class="attr">#[method(name = <span class="string">"getEntityCount"</span>)]
     </span><span class="kw">async fn </span>get_entity_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;u64&gt;;

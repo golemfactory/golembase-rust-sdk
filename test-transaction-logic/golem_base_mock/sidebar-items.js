@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["api","block","blockchain","controller","entity_db","execution","managed_accounts","query_parser","server","transaction_pool"],"struct":["GolemBaseMock"]};
+window.SIDEBAR_ITEMS = {"fn":["create_error"],"macro":["return_override"],"mod":["api","block","blockchain","controller","entity_db","execution","managed_accounts","query_parser","server","transaction_pool"],"struct":["GolemBaseMock"]};
