@@ -66,10 +66,27 @@
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::eips::BlockNumberOrTag;
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::eips::BlockNumberOrTag;
 <span class="kw">use </span>alloy::primitives::{Address, B256};
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bigdecimal::BigDecimal;
+<span class="kw">use </span>std::env;
 
 <span class="kw">use </span>golem_base_sdk::client::GolemBaseClient;
 <span class="kw">use </span>golem_base_sdk::entity::Hash;
@@ -84,8 +101,22 @@
 
 <span class="doccomment">/// Initializes the logger for tests
 </span><span class="kw">pub fn </span>init_logger(should_init: bool) {
-    <span class="kw">if </span>should_init {
-        <span class="kw">let _ </span>= env_logger::try_init();
+    <span class="comment">// Check if TEST_ENABLE_ALL_LOGS_OVERRIDE environment variable overrides the should_init parameter
+    </span><span class="kw">let </span>env_override = env::var(<span class="string">"TEST_ENABLE_ALL_LOGS_OVERRIDE"</span>)
+        .map(|val| val.parse::&lt;bool&gt;().unwrap_or(<span class="bool-val">false</span>))
+        .unwrap_or(<span class="bool-val">false</span>);
+    <span class="kw">let </span>should_enable = should_init || env_override;
+
+    <span class="kw">if </span>should_enable {
+        <span class="kw">if let </span><span class="prelude-val">Ok</span>(_env) = env::var(<span class="string">"RUST_LOG"</span>) {
+            env_logger::try_init_from_env(env_logger::Env::default()).ok();
+        } <span class="kw">else </span>{
+            env_logger::builder()
+                .filter_level(log::LevelFilter::Debug)
+                .format_timestamp(<span class="prelude-val">Some</span>(env_logger::TimestampPrecision::Millis))
+                .try_init()
+                .ok();
+        }
     }
 }
 
@@ -103,8 +134,9 @@
 </span><span class="kw">pub async fn </span>create_test_account(client: <span class="kw-2">&amp;</span>GolemBaseClient) -&gt; <span class="prelude-ty">Result</span>&lt;Address&gt; {
     <span class="kw">let </span>account = client.account_generate(<span class="string">"test123"</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>fund_tx = client.fund(account, BigDecimal::from(<span class="number">1</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>balance = client.get_balance(account).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="macro">log::info!</span>(<span class="string">"Account {account} funded with transaction: {fund_tx}"</span>);
+    <span class="macro">log::info!</span>(<span class="string">"Account {account} funded with transaction: {fund_tx} and balance {balance}"</span>);
     <span class="prelude-val">Ok</span>(account)
 }
 

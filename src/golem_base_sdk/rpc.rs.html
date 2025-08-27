@@ -186,7 +186,19 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::Address;
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::Address;
 <span class="kw">use </span>alloy::rpc::json_rpc::{RpcRecv, RpcSend};
 <span class="kw">use </span>alloy_json_rpc::RpcError <span class="kw">as </span>AlloyError;
 <span class="kw">use </span>anyhow::anyhow;
@@ -217,7 +229,7 @@
 
 <span class="doccomment">/// Type representing metadata for an entity.
 /// Contains information such as expiration, payload, annotations, and owner.
-</span><span class="attr">#[derive(Debug, Serialize, Deserialize)]
+</span><span class="attr">#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>EntityMetaData {
     <span class="doccomment">/// The block number at which the entity expires.
@@ -234,17 +246,21 @@
 
 <span class="doccomment">/// Represents a single search result from a query.
 /// Contains the entity key and the value (decoded from base64).
-</span><span class="attr">#[derive(Debug, Serialize, Deserialize)]
+</span><span class="attr">#[derive(Clone, Debug, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>SearchResult {
     <span class="attr">#[serde(rename = <span class="string">"key"</span>)]
     </span><span class="kw">pub </span>key: Hash,
-    <span class="attr">#[serde(rename = <span class="string">"value"</span>, deserialize_with = <span class="string">"deserialize_base64"</span>)]
+    <span class="attr">#[serde(
+        rename = <span class="string">"value"</span>,
+        deserialize_with = <span class="string">"deserialize_base64"</span>,
+        serialize_with = <span class="string">"serialize_base64"
+    </span>)]
     </span><span class="kw">pub </span>value: Bytes,
 }
 
 <span class="doccomment">/// Helper for deserializing base64-encoded storage values.
 /// Used to decode entity values returned from the RPC API.
-</span><span class="kw">fn </span>deserialize_base64&lt;<span class="lifetime">'de</span>, D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;Bytes, D::Error&gt;
+</span><span class="kw">pub fn </span>deserialize_base64&lt;<span class="lifetime">'de</span>, D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;Bytes, D::Error&gt;
 <span class="kw">where
     </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
 {
@@ -253,6 +269,14 @@
         .decode(s)
         .map(Bytes::from)
         .map_err(serde::de::Error::custom)
+}
+
+<span class="doccomment">/// Serialize Bytes as base64 string
+</span><span class="kw">pub fn </span>serialize_base64&lt;S&gt;(value: <span class="kw-2">&amp;</span>Bytes, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+<span class="kw">where
+    </span>S: serde::Serializer,
+{
+    serializer.serialize_str(<span class="kw-2">&amp;</span>BASE64.encode(value))
 }
 
 <span class="kw">impl </span>SearchResult {
@@ -277,7 +301,7 @@
         <span class="self">self</span>.provider
             .request(method.clone(), params)
             .<span class="kw">await
-            </span>.inspect(|res| <span class="macro">log::debug!</span>(<span class="string">"RPC Response: {:?}"</span>, res))
+            </span>.inspect(|res| <span class="macro">log::trace!</span>(<span class="string">"RPC Response: {:?}"</span>, res))
             .map_err(|e| <span class="kw">match </span>e {
                 RpcError::Original(AlloyError::ErrorResp(err)) =&gt; {
                     <span class="macro">anyhow!</span>(<span class="string">"Error response from RPC service: {err}"</span>)
