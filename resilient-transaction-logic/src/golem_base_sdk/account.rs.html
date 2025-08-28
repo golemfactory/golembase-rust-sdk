@@ -531,8 +531,7 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#533" id="533">533</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     EthereumTxEnvelope, EthereumTypedTransaction, SignableTransaction, Signed, TxEip4844,
     TxEip4844Variant,
 };
@@ -784,8 +783,8 @@
             </span><span class="kw">let </span>signed = <span class="self">self</span>.sign_transaction(_request).<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="kw">let </span>encoded = <span class="self">self</span>.encode_transaction(<span class="kw-2">&amp;</span>signed)<span class="question-mark">?</span>;
 
-            <span class="comment">// Send the transaction and register it for tracking.
-            </span>attempt += <span class="number">1</span>;
+            attempt += <span class="number">1</span>;
+
             <span class="kw">let </span>pending = <span class="kw">match </span><span class="self">self</span>.provider.send_raw_transaction(<span class="kw-2">&amp;</span>encoded).<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(pending) =&gt; pending,
                 <span class="comment">// Retry transaction with updated nonce.
@@ -856,9 +855,8 @@
         </span><span class="kw">let </span>last_used_nonce = <span class="kw-2">*</span><span class="self">self</span>.last_used_nonce.lock().unwrap();
 
         <span class="comment">// Get current blockchain nonce from get_nonce. This function includes only
-        // confirmed transactions.
-        //let account_nonce = self.provider.get_nonce(address).await?;
-        </span><span class="kw">let </span>account_nonce = <span class="number">0</span>;
+        // transaction included in the latest block.
+        </span><span class="kw">let </span>account_nonce = <span class="self">self</span>.provider.get_nonce(address).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Get next pending nonce from get_transaction_count. This function includes
         // pending transactions as well.
