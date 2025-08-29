@@ -531,7 +531,19 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     EthereumTxEnvelope, EthereumTypedTransaction, SignableTransaction, Signed, TxEip4844,
     TxEip4844Variant,
 };
@@ -839,7 +851,19 @@
                         request,
                         response_tx,
                     } = msg;
-                    <span class="kw">let </span>result = queue.process_transaction(request).<span class="kw">await</span>;
+
+                    <span class="kw">let </span>result = <span class="kw">match </span>tokio::time::timeout(
+                        queue.tx_config.transaction_receipt_timeout,
+                        queue.process_transaction(request),
+                    )
+                    .<span class="kw">await
+                    </span>{
+                        <span class="prelude-val">Ok</span>(result) =&gt; result,
+                        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                            <span class="string">"Transaction processing timed out (timeout: {}): {e}"</span>,
+                            humantime::format_duration(queue.tx_config.transaction_receipt_timeout)
+                        )),
+                    };
                     <span class="kw">let _ </span>= response_tx.send(result);
                 }
             });

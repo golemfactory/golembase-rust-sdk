@@ -571,7 +571,8 @@
 <a href="#570" id="570">570</a>
 <a href="#571" id="571">571</a>
 <a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::sync::{Arc, RwLock};
 <span class="kw">use </span>std::time::{Duration, Instant};
@@ -680,6 +681,7 @@
     </span><span class="attr">#[builder]
     </span><span class="kw">pub fn </span>builder(wallet: PrivateKeySigner, rpc_url: Url) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>provider = ProviderBuilder::new()
+            .fetch_chain_id()
             .connect_http(rpc_url.clone())
             .erased();
 
