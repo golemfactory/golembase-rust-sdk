@@ -516,7 +516,34 @@
 <a href="#515" id="515">515</a>
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
-<a href="#518" id="518">518</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::consensus::{
     EthereumTxEnvelope, EthereumTypedTransaction, SignableTransaction, Signed, TxEip4844,
     TxEip4844Variant,
 };
@@ -558,6 +585,32 @@
     </span><span class="kw">pub </span>next_pending_nonce: u64,
     <span class="doccomment">/// Current nonce value from blockchain (represents next nonce after last confirmed transaction)
     </span><span class="kw">pub </span>account_nonce: u64,
+}
+
+<span class="kw">impl </span>NonceInfo {
+    <span class="doccomment">/// Picks the appropriate nonce for the next transaction and logs relevant information.
+    /// Returns the maximum of next_pending_nonce and (last_used_nonce + 1).
+    </span><span class="kw">pub fn </span>pick_nonce(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="macro">log::info!</span>(<span class="string">"Nonce info: {self}"</span>);
+
+        <span class="kw">let </span>nonce = <span class="kw">match </span><span class="self">self</span>.last_used_nonce {
+            <span class="prelude-val">Some</span>(last_used) =&gt; std::cmp::max(<span class="self">self</span>.next_pending_nonce, last_used + <span class="number">1</span>),
+            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.next_pending_nonce,
+        };
+
+        <span class="kw">let </span>pending = <span class="self">self</span>.next_pending_nonce <span class="kw">as </span>i64 - (<span class="self">self</span>.account_nonce <span class="kw">as </span>i64 + <span class="number">1</span>);
+        <span class="kw">if </span>pending &gt; <span class="number">0 </span>{
+            <span class="macro">log::debug!</span>(<span class="string">"Still processing {pending} pending transactions"</span>);
+        }
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(last_used) = <span class="self">self</span>.last_used_nonce {
+            <span class="kw">if </span>(last_used + <span class="number">1</span>) != <span class="self">self</span>.next_pending_nonce {
+                <span class="macro">log::warn!</span>(<span class="string">"Last used nonce is not equal to next pending nonce. Probably transaction was sent externally."</span>);
+            }
+        }
+
+        nonce
+    }
 }
 
 <span class="doccomment">/// The address of the GolemBase storage processor contract.
@@ -720,26 +773,10 @@
         // that it have full knowledge the returned nonces. At the same time tools outside of our
         // control can send transactions as well.
         </span><span class="kw">let </span>nonce_info = <span class="self">self</span>.get_nonces(from).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">let </span>nonce = <span class="kw">match </span>nonce_info.last_used_nonce {
-            <span class="prelude-val">Some</span>(last_used) =&gt; std::cmp::max(nonce_info.next_pending_nonce, last_used + <span class="number">1</span>),
-            <span class="prelude-val">None </span>=&gt; nonce_info.next_pending_nonce,
-        };
-
-        <span class="macro">log::info!</span>(<span class="string">"Nonce info: {nonce_info}"</span>);
-
-        <span class="kw">let </span>pending = nonce_info.next_pending_nonce <span class="kw">as </span>i64 - (nonce_info.account_nonce <span class="kw">as </span>i64 + <span class="number">1</span>);
-        <span class="kw">if </span>pending &gt; <span class="number">0 </span>{
-            <span class="macro">log::debug!</span>(<span class="string">"Still processing {pending} pending transactions"</span>);
-        }
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(last_used) = nonce_info.last_used_nonce {
-            <span class="kw">if </span>(last_used + <span class="number">1</span>) != nonce_info.next_pending_nonce {
-                <span class="macro">log::warn!</span>(<span class="string">"Last used nonce is not equal to next pending nonce. Probably transaction was sent externally."</span>);
-            }
-        }
+        <span class="kw">let </span>nonce = nonce_info.pick_nonce();
 
         <span class="comment">// Update the request with the next pending nonce.
-        </span><span class="kw">let </span>request = request.with_nonce(nonce);
+        </span><span class="kw">let </span><span class="kw-2">mut </span>request = request.with_nonce(nonce);
 
         <span class="kw">let </span>max_retries = <span class="self">self</span>.tx_config.max_retries;
         <span class="kw">let </span><span class="kw-2">mut </span>attempt: u32 = <span class="number">0</span>;
@@ -758,15 +795,21 @@
             </span><span class="kw">let </span>signed = <span class="self">self</span>.sign_transaction(_request).<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="kw">let </span>encoded = <span class="self">self</span>.encode_transaction(<span class="kw-2">&amp;</span>signed)<span class="question-mark">?</span>;
 
-            <span class="comment">// Send the transaction and register it for tracking.
-            </span><span class="kw">let </span>pending = <span class="self">self
-                </span>.provider
-                .send_raw_transaction(<span class="kw-2">&amp;</span>encoded)
-                .<span class="kw">await
-                </span>.map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Failed to send transaction: {e}"</span>))<span class="question-mark">?</span>;
+            attempt += <span class="number">1</span>;
+
+            <span class="kw">let </span>pending = <span class="kw">match </span><span class="self">self</span>.provider.send_raw_transaction(<span class="kw-2">&amp;</span>encoded).<span class="kw">await </span>{
+                <span class="prelude-val">Ok</span>(pending) =&gt; pending,
+                <span class="comment">// Retry transaction with updated nonce.
+                </span><span class="prelude-val">Err</span>(e) <span class="kw">if </span>e.to_string().contains(<span class="string">"nonce too low"</span>) =&gt; {
+                    <span class="kw">let </span>nonce_info = <span class="self">self</span>.get_nonces(from).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>nonce = nonce_info.pick_nonce();
+                    request.set_nonce(nonce);
+                    <span class="kw">continue</span>;
+                }
+                <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to send transaction: {e}"</span>)),
+            };
 
             <span class="kw">let </span>tx_hash = <span class="kw-2">*</span>pending.tx_hash();
-            attempt += <span class="number">1</span>;
 
             <span class="macro">log::debug!</span>(<span class="string">"Transaction attempt {attempt} sent with hash: {tx_hash}"</span>);
 
@@ -808,7 +851,19 @@
                         request,
                         response_tx,
                     } = msg;
-                    <span class="kw">let </span>result = queue.process_transaction(request).<span class="kw">await</span>;
+
+                    <span class="kw">let </span>result = <span class="kw">match </span>tokio::time::timeout(
+                        queue.tx_config.transaction_receipt_timeout,
+                        queue.process_transaction(request),
+                    )
+                    .<span class="kw">await
+                    </span>{
+                        <span class="prelude-val">Ok</span>(result) =&gt; result,
+                        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                            <span class="string">"Transaction processing timed out (timeout: {}): {e}"</span>,
+                            humantime::format_duration(queue.tx_config.transaction_receipt_timeout)
+                        )),
+                    };
                     <span class="kw">let _ </span>= response_tx.send(result);
                 }
             });
@@ -824,9 +879,8 @@
         </span><span class="kw">let </span>last_used_nonce = <span class="kw-2">*</span><span class="self">self</span>.last_used_nonce.lock().unwrap();
 
         <span class="comment">// Get current blockchain nonce from get_nonce. This function includes only
-        // confirmed transactions.
-        //let account_nonce = self.provider.get_nonce(address).await?;
-        </span><span class="kw">let </span>account_nonce = <span class="number">0</span>;
+        // transaction included in the latest block.
+        </span><span class="kw">let </span>account_nonce = <span class="self">self</span>.provider.get_nonce(address).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Get next pending nonce from get_transaction_count. This function includes
         // pending transactions as well.

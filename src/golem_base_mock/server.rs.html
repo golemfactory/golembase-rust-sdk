@@ -108,7 +108,21 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, U256};
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a></pre></div><pre class="rust"><code><span class="kw">use </span>alloy::primitives::{Address, U256};
 <span class="kw">use </span>anyhow;
 <span class="kw">use </span>jsonrpsee::server::{RpcModule, Server};
 <span class="kw">use </span>std::net::SocketAddr;
@@ -142,6 +156,11 @@
 
     <span class="kw">pub fn </span>with_chain_id(<span class="kw-2">mut </span><span class="self">self</span>, chain_id: u64) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.state.chain_id = U256::from(chain_id);
+        <span class="self">self
+    </span>}
+
+    <span class="kw">pub fn </span>with_url(<span class="kw-2">mut </span><span class="self">self</span>, url: Url) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.url = url;
         <span class="self">self
     </span>}
 
@@ -186,6 +205,14 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.url
     }
 
+    <span class="doccomment">/// Resolve host name to IP address for localhost
+    </span><span class="kw">fn </span>resolve_host(host: <span class="kw-2">&amp;</span>str) -&gt; String {
+        <span class="kw">match </span>host {
+            <span class="string">"localhost" </span>=&gt; <span class="string">"127.0.0.1"</span>.to_string(),
+            <span class="kw">_ </span>=&gt; host.to_string(),
+        }
+    }
+
     <span class="doccomment">/// Convert URL to SocketAddr
     </span><span class="kw">pub fn </span>socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;SocketAddr&gt; {
         <span class="kw">let </span>url = <span class="self">self</span>.url.clone();
@@ -196,25 +223,26 @@
             .port()
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"URL has no port specified"</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>addr = <span class="macro">format!</span>(<span class="string">"{}:{}"</span>, host, port);
+        <span class="kw">let </span>resolved_host = <span class="self">Self</span>::resolve_host(host);
+        <span class="kw">let </span>addr = <span class="macro">format!</span>(<span class="string">"{}:{}"</span>, resolved_host, port);
         addr.parse()
             .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Failed to parse socket address: {}"</span>, e))
     }
 
     <span class="doccomment">/// Create a test mock server with test accounts and balances
     </span><span class="kw">pub async fn </span>create_test_mock_server() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// Create server
-        </span><span class="kw">let </span><span class="kw-2">mut </span>server = <span class="self">Self</span>::new().with_chain_id(<span class="number">1337</span>);
+        <span class="kw">let </span>server = <span class="self">Self</span>::new().with_chain_id(<span class="number">1337</span>);
+        server.default_start().<span class="kw">await
+    </span>}
 
-        <span class="comment">// Create test accounts with initial balance
-        </span>server
-            .create_test_account(U256::from(<span class="number">1000000000000000000000u128</span>))
+    <span class="kw">pub async fn </span>default_start(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// Create test accounts with initial balance, to fund other accounts
+        </span><span class="self">self</span>.create_test_account(U256::from(<span class="number">1000000000000000000000u128</span>))
             .<span class="kw">await</span>;
 
         <span class="comment">// Start the server
-        </span><span class="kw">let </span>socket_addr = server.socket_addr()<span class="question-mark">?</span>;
-        <span class="kw">let </span>server = server.start(socket_addr).<span class="kw">await</span><span class="question-mark">?</span>;
-
+        </span><span class="kw">let </span>socket_addr = <span class="self">self</span>.socket_addr()<span class="question-mark">?</span>;
+        <span class="kw">let </span>server = <span class="self">self</span>.start(socket_addr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(server)
     }
 }

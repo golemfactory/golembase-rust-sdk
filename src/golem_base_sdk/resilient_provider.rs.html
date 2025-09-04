@@ -545,7 +545,7 @@
         params: S,
     ) -&gt; std::result::Result&lt;R, RpcError&lt;AlloyRpcError&lt;TransportErrorKind&gt;&gt;&gt; {
         <span class="kw">let </span>method = method.into();
-        <span class="self">self</span>.retry(<span class="string">"rpc_request"</span>, || <span class="kw">async </span>{
+        <span class="self">self</span>.retry(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"request: {method}"</span>), || <span class="kw">async </span>{
             <span class="self">self</span>.provider
                 .client()
                 .request(method.clone(), params.clone())
@@ -568,12 +568,12 @@
     </span><span class="kw">pub async fn </span>get_nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
         <span class="kw">let </span>address_clone = address;
         <span class="prelude-val">Ok</span>(<span class="self">self
-            </span>.retry(<span class="string">"get_proof"</span>, <span class="kw">move </span>|| <span class="kw">async move </span>{
-                <span class="kw">match </span><span class="self">self</span>.provider.get_proof(address_clone, <span class="macro">vec!</span>[]).<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>(proof_response) =&gt; <span class="prelude-val">Ok</span>(proof_response.nonce),
-                    <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Failed to get proof: {}"</span>, e)),
-                }
-            })
+            </span>.retry(<span class="string">"get_nonce"</span>, <span class="kw">move </span>|| <span class="kw">async move </span>{
+                <span class="self">self</span>.provider
+                    .get_transaction_count(address_clone)
+                    .latest()
+                    .<span class="kw">await
+            </span>})
             .<span class="kw">await</span><span class="question-mark">?</span>)
     }
 
