@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Account","Blockchain"]};
+window.SIDEBAR_ITEMS = {"struct":["Account","Blockchain","ChainConfig"]};
