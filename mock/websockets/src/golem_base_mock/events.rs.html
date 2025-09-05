@@ -13,375 +13,382 @@
 <a href=#13 id=13 data-nosnippet>13</a>    golem_base_storage_entity_updated,
 <a href=#14 id=14 data-nosnippet>14</a>};
 <a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span><span class="kw">crate</span>::block::{Block, Transaction};
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span><span class="kw">crate</span>::entity_db::Entity;
-<a href=#18 id=18 data-nosnippet>18</a>
-<a href=#19 id=19 data-nosnippet>19</a><span class="doccomment">/// Event structure that stores all information needed to recreate an alloy Log
-<a href=#20 id=20 data-nosnippet>20</a></span><span class="attr">#[derive(Debug, Clone)]
-<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">pub struct </span>LogEvent {
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="doccomment">/// The contract address that emitted the event
-<a href=#23 id=23 data-nosnippet>23</a>    </span><span class="kw">pub </span>address: Address,
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="doccomment">/// The event topic (hash of the event signature)
-<a href=#25 id=25 data-nosnippet>25</a>    </span><span class="kw">pub </span>topic: B256,
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="doccomment">/// The entity ID (first indexed parameter)
-<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="kw">pub </span>entity_id: B256,
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="doccomment">/// Additional data (second indexed parameter for some events)
-<a href=#29 id=29 data-nosnippet>29</a>    </span><span class="kw">pub </span>additional_data: <span class="prelude-ty">Option</span>&lt;B256&gt;,
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="doccomment">/// The block number where the event occurred
-<a href=#31 id=31 data-nosnippet>31</a>    </span><span class="kw">pub </span>block_number: u64,
-<a href=#32 id=32 data-nosnippet>32</a>    <span class="doccomment">/// The transaction hash that triggered the event
-<a href=#33 id=33 data-nosnippet>33</a>    </span><span class="kw">pub </span>transaction_hash: B256,
-<a href=#34 id=34 data-nosnippet>34</a>    <span class="doccomment">/// The transaction index within the block
-<a href=#35 id=35 data-nosnippet>35</a>    </span><span class="kw">pub </span>transaction_index: u64,
-<a href=#36 id=36 data-nosnippet>36</a>    <span class="doccomment">/// The log index within the transaction
-<a href=#37 id=37 data-nosnippet>37</a>    </span><span class="kw">pub </span>log_index: u64,
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="doccomment">/// The block hash
-<a href=#39 id=39 data-nosnippet>39</a>    </span><span class="kw">pub </span>block_hash: B256,
-<a href=#40 id=40 data-nosnippet>40</a>}
-<a href=#41 id=41 data-nosnippet>41</a>
-<a href=#42 id=42 data-nosnippet>42</a><span class="kw">impl </span>Into&lt;Log&gt; <span class="kw">for </span>LogEvent {
-<a href=#43 id=43 data-nosnippet>43</a>    <span class="kw">fn </span>into(<span class="self">self</span>) -&gt; Log {
-<a href=#44 id=44 data-nosnippet>44</a>        <span class="kw">let </span><span class="kw-2">mut </span>topics = <span class="macro">vec!</span>[<span class="self">self</span>.topic];
-<a href=#45 id=45 data-nosnippet>45</a>        topics.push(<span class="self">self</span>.entity_id);
-<a href=#46 id=46 data-nosnippet>46</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = <span class="self">self</span>.additional_data {
-<a href=#47 id=47 data-nosnippet>47</a>            topics.push(data);
-<a href=#48 id=48 data-nosnippet>48</a>        }
-<a href=#49 id=49 data-nosnippet>49</a>
-<a href=#50 id=50 data-nosnippet>50</a>        <span class="kw">let </span>inner =
-<a href=#51 id=51 data-nosnippet>51</a>            alloy::primitives::Log::new(<span class="self">self</span>.address, topics, alloy::primitives::Bytes::new())
-<a href=#52 id=52 data-nosnippet>52</a>                .unwrap_or_else(|| alloy::primitives::Log::empty());
-<a href=#53 id=53 data-nosnippet>53</a>
-<a href=#54 id=54 data-nosnippet>54</a>        Log {
-<a href=#55 id=55 data-nosnippet>55</a>            inner,
-<a href=#56 id=56 data-nosnippet>56</a>            block_timestamp: <span class="prelude-val">None</span>, <span class="comment">// We don't have timestamp in our LogEvent
-<a href=#57 id=57 data-nosnippet>57</a>            </span>block_number: <span class="prelude-val">Some</span>(<span class="self">self</span>.block_number),
-<a href=#58 id=58 data-nosnippet>58</a>            transaction_hash: <span class="prelude-val">Some</span>(<span class="self">self</span>.transaction_hash),
-<a href=#59 id=59 data-nosnippet>59</a>            transaction_index: <span class="prelude-val">Some</span>(<span class="self">self</span>.transaction_index),
-<a href=#60 id=60 data-nosnippet>60</a>            log_index: <span class="prelude-val">Some</span>(<span class="self">self</span>.log_index),
-<a href=#61 id=61 data-nosnippet>61</a>            block_hash: <span class="prelude-val">Some</span>(<span class="self">self</span>.block_hash),
-<a href=#62 id=62 data-nosnippet>62</a>            removed: <span class="bool-val">false</span>,
-<a href=#63 id=63 data-nosnippet>63</a>        }
-<a href=#64 id=64 data-nosnippet>64</a>    }
-<a href=#65 id=65 data-nosnippet>65</a>}
-<a href=#66 id=66 data-nosnippet>66</a>
-<a href=#67 id=67 data-nosnippet>67</a><span class="doccomment">/// Simple filter for event subscriptions
-<a href=#68 id=68 data-nosnippet>68</a></span><span class="attr">#[derive(Debug, Clone)]
-<a href=#69 id=69 data-nosnippet>69</a></span><span class="kw">pub struct </span>EventFilter {
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="doccomment">/// Contract addresses to filter by
-<a href=#71 id=71 data-nosnippet>71</a>    </span><span class="kw">pub </span>addresses: FilterSet&lt;Address&gt;,
-<a href=#72 id=72 data-nosnippet>72</a>    <span class="doccomment">/// Event topics to filter by
-<a href=#73 id=73 data-nosnippet>73</a>    </span><span class="kw">pub </span>topics: Vec&lt;FilterSet&lt;B256&gt;&gt;,
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="doccomment">/// Block range to filter by
-<a href=#75 id=75 data-nosnippet>75</a>    </span><span class="kw">pub </span>from_block: <span class="prelude-ty">Option</span>&lt;u64&gt;,
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">pub </span>to_block: <span class="prelude-ty">Option</span>&lt;u64&gt;,
-<a href=#77 id=77 data-nosnippet>77</a>}
-<a href=#78 id=78 data-nosnippet>78</a>
-<a href=#79 id=79 data-nosnippet>79</a><span class="doccomment">/// Trait for handling entity events
-<a href=#80 id=80 data-nosnippet>80</a></span><span class="attr">#[async_trait::async_trait]
-<a href=#81 id=81 data-nosnippet>81</a></span><span class="kw">pub trait </span>EntityEventHandler: Send + Sync {
-<a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">async fn </span>on_entity_created(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="kw">async fn </span>on_entity_updated(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">async fn </span>on_entity_removed(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
-<a href=#85 id=85 data-nosnippet>85</a>    <span class="doccomment">/// Finish processing a block and emit all collected logs with proper indices
-<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">async fn </span>finish_block(<span class="kw-2">&amp;</span><span class="self">self</span>, block_number: u64);
-<a href=#87 id=87 data-nosnippet>87</a>}
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a><span class="doccomment">/// Information about a subscription including its filter
-<a href=#90 id=90 data-nosnippet>90</a></span><span class="attr">#[derive(Clone)]
-<a href=#91 id=91 data-nosnippet>91</a></span><span class="kw">struct </span>SubscriptionInfo {
-<a href=#92 id=92 data-nosnippet>92</a>    sender: broadcast::Sender&lt;LogEvent&gt;,
-<a href=#93 id=93 data-nosnippet>93</a>    filter: <span class="prelude-ty">Option</span>&lt;EventFilter&gt;,
-<a href=#94 id=94 data-nosnippet>94</a>}
-<a href=#95 id=95 data-nosnippet>95</a>
-<a href=#96 id=96 data-nosnippet>96</a><span class="kw">impl </span>SubscriptionInfo {
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="doccomment">/// Send a log event to the subscription with logging
-<a href=#98 id=98 data-nosnippet>98</a>    </span><span class="kw">fn </span>emit_event(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: <span class="kw-2">&amp;</span>LogEvent) {
-<a href=#99 id=99 data-nosnippet>99</a>        <span class="kw">let _ </span>= <span class="self">self</span>.sender.send(log_event.clone());
-<a href=#100 id=100 data-nosnippet>100</a>        <span class="macro">log::info!</span>(
-<a href=#101 id=101 data-nosnippet>101</a>            <span class="string">"Sent event to subscription: block={}, tx={}, log_index={}, entity_id={}"</span>,
-<a href=#102 id=102 data-nosnippet>102</a>            log_event.block_number,
-<a href=#103 id=103 data-nosnippet>103</a>            log_event.transaction_hash,
-<a href=#104 id=104 data-nosnippet>104</a>            log_event.log_index,
-<a href=#105 id=105 data-nosnippet>105</a>            log_event.entity_id
-<a href=#106 id=106 data-nosnippet>106</a>        );
-<a href=#107 id=107 data-nosnippet>107</a>    }
-<a href=#108 id=108 data-nosnippet>108</a>}
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a><span class="doccomment">/// Inner state of the EventEmitter, wrapped in a single RwLock
-<a href=#111 id=111 data-nosnippet>111</a></span><span class="attr">#[derive(Default)]
-<a href=#112 id=112 data-nosnippet>112</a></span><span class="kw">struct </span>EventEmitterState {
-<a href=#113 id=113 data-nosnippet>113</a>    subscriptions: HashMap&lt;String, SubscriptionInfo&gt;,
-<a href=#114 id=114 data-nosnippet>114</a>    <span class="doccomment">/// Pending logs per block, waiting to be emitted with proper indices
-<a href=#115 id=115 data-nosnippet>115</a>    </span>pending_logs: HashMap&lt;u64, Vec&lt;LogEvent&gt;&gt;,
-<a href=#116 id=116 data-nosnippet>116</a>}
-<a href=#117 id=117 data-nosnippet>117</a>
-<a href=#118 id=118 data-nosnippet>118</a><span class="doccomment">/// Event emission system for GolemBase mock
-<a href=#119 id=119 data-nosnippet>119</a></span><span class="attr">#[derive(Clone, Default)]
-<a href=#120 id=120 data-nosnippet>120</a></span><span class="kw">pub struct </span>EventEmitter {
-<a href=#121 id=121 data-nosnippet>121</a>    state: Arc&lt;RwLock&lt;EventEmitterState&gt;&gt;,
-<a href=#122 id=122 data-nosnippet>122</a>}
-<a href=#123 id=123 data-nosnippet>123</a>
-<a href=#124 id=124 data-nosnippet>124</a><span class="kw">impl </span>EventEmitter {
-<a href=#125 id=125 data-nosnippet>125</a>    <span class="doccomment">/// Create a new event emitter
-<a href=#126 id=126 data-nosnippet>126</a>    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-<a href=#127 id=127 data-nosnippet>127</a>        <span class="self">Self</span>::default()
-<a href=#128 id=128 data-nosnippet>128</a>    }
-<a href=#129 id=129 data-nosnippet>129</a>
-<a href=#130 id=130 data-nosnippet>130</a>    <span class="doccomment">/// Generate a unique subscription ID
-<a href=#131 id=131 data-nosnippet>131</a>    </span><span class="kw">fn </span>generate_subscription_id() -&gt; String {
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="macro">format!</span>(
-<a href=#133 id=133 data-nosnippet>133</a>            <span class="string">"events_{}"</span>,
-<a href=#134 id=134 data-nosnippet>134</a>            SystemTime::now()
-<a href=#135 id=135 data-nosnippet>135</a>                .duration_since(UNIX_EPOCH)
-<a href=#136 id=136 data-nosnippet>136</a>                .unwrap()
-<a href=#137 id=137 data-nosnippet>137</a>                .as_nanos()
-<a href=#138 id=138 data-nosnippet>138</a>        )
-<a href=#139 id=139 data-nosnippet>139</a>    }
-<a href=#140 id=140 data-nosnippet>140</a>
-<a href=#141 id=141 data-nosnippet>141</a>    <span class="doccomment">/// Get the latest block number from the state
-<a href=#142 id=142 data-nosnippet>142</a>    </span><span class="kw">async fn </span>get_latest_block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
-<a href=#144 id=144 data-nosnippet>144</a>        state.pending_logs.keys().max().copied().unwrap_or(<span class="number">0</span>)
-<a href=#145 id=145 data-nosnippet>145</a>    }
-<a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>    <span class="doccomment">/// Extract block range from Filter
-<a href=#148 id=148 data-nosnippet>148</a>    </span><span class="kw">async fn </span>extract_block_range(
-<a href=#149 id=149 data-nosnippet>149</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#150 id=150 data-nosnippet>150</a>        filter: <span class="kw-2">&amp;</span>Filter,
-<a href=#151 id=151 data-nosnippet>151</a>    ) -&gt; anyhow::Result&lt;(<span class="prelude-ty">Option</span>&lt;u64&gt;, <span class="prelude-ty">Option</span>&lt;u64&gt;)&gt; {
-<a href=#152 id=152 data-nosnippet>152</a>        <span class="kw">let </span>latest = <span class="self">self</span>.get_latest_block_number().<span class="kw">await</span>;
-<a href=#153 id=153 data-nosnippet>153</a>
-<a href=#154 id=154 data-nosnippet>154</a>        <span class="kw">match </span><span class="kw-2">&amp;</span>filter.block_option {
-<a href=#155 id=155 data-nosnippet>155</a>            FilterBlockOption::Range {
-<a href=#156 id=156 data-nosnippet>156</a>                from_block,
-<a href=#157 id=157 data-nosnippet>157</a>                to_block,
-<a href=#158 id=158 data-nosnippet>158</a>            } =&gt; {
-<a href=#159 id=159 data-nosnippet>159</a>                <span class="kw">let </span>from = from_block.and_then(|b| <span class="self">self</span>.extract_block_number(<span class="kw-2">&amp;</span>b, latest));
-<a href=#160 id=160 data-nosnippet>160</a>                <span class="kw">let </span>to = to_block.and_then(|b| <span class="self">self</span>.extract_block_number(<span class="kw-2">&amp;</span>b, latest));
-<a href=#161 id=161 data-nosnippet>161</a>                <span class="prelude-val">Ok</span>((from, to))
-<a href=#162 id=162 data-nosnippet>162</a>            }
-<a href=#163 id=163 data-nosnippet>163</a>            FilterBlockOption::AtBlockHash(<span class="kw">_</span>) =&gt; {
-<a href=#164 id=164 data-nosnippet>164</a>                <span class="comment">// Single block hash - we can't resolve the hash to a block number
-<a href=#165 id=165 data-nosnippet>165</a>                </span><span class="macro">anyhow::bail!</span>(<span class="string">"[Not implemented] Cannot return events for a block hash"</span>)
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use crate</span>::{
+<a href=#17 id=17 data-nosnippet>17</a>    block::{Block, Transaction},
+<a href=#18 id=18 data-nosnippet>18</a>    display::EnableDisplay,
+<a href=#19 id=19 data-nosnippet>19</a>};
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use crate</span>::{display::display_topics, entity_db::Entity};
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="doccomment">/// Event structure that stores all information needed to recreate an alloy Log
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="attr">#[derive(Debug, Clone)]
+<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">pub struct </span>LogEvent {
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="doccomment">/// The contract address that emitted the event
+<a href=#26 id=26 data-nosnippet>26</a>    </span><span class="kw">pub </span>address: Address,
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// The event topic (hash of the event signature)
+<a href=#28 id=28 data-nosnippet>28</a>    </span><span class="kw">pub </span>topic: B256,
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="doccomment">/// The entity ID (first indexed parameter)
+<a href=#30 id=30 data-nosnippet>30</a>    </span><span class="kw">pub </span>entity_id: B256,
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="doccomment">/// Additional data (second indexed parameter for some events)
+<a href=#32 id=32 data-nosnippet>32</a>    </span><span class="kw">pub </span>additional_data: <span class="prelude-ty">Option</span>&lt;B256&gt;,
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="doccomment">/// The block number where the event occurred
+<a href=#34 id=34 data-nosnippet>34</a>    </span><span class="kw">pub </span>block_number: u64,
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="doccomment">/// The transaction hash that triggered the event
+<a href=#36 id=36 data-nosnippet>36</a>    </span><span class="kw">pub </span>transaction_hash: B256,
+<a href=#37 id=37 data-nosnippet>37</a>    <span class="doccomment">/// The transaction index within the block
+<a href=#38 id=38 data-nosnippet>38</a>    </span><span class="kw">pub </span>transaction_index: u64,
+<a href=#39 id=39 data-nosnippet>39</a>    <span class="doccomment">/// The log index within the transaction
+<a href=#40 id=40 data-nosnippet>40</a>    </span><span class="kw">pub </span>log_index: u64,
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="doccomment">/// The block hash
+<a href=#42 id=42 data-nosnippet>42</a>    </span><span class="kw">pub </span>block_hash: B256,
+<a href=#43 id=43 data-nosnippet>43</a>}
+<a href=#44 id=44 data-nosnippet>44</a>
+<a href=#45 id=45 data-nosnippet>45</a><span class="kw">impl </span>Into&lt;Log&gt; <span class="kw">for </span>LogEvent {
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="kw">fn </span>into(<span class="self">self</span>) -&gt; Log {
+<a href=#47 id=47 data-nosnippet>47</a>        <span class="kw">let </span><span class="kw-2">mut </span>topics = <span class="macro">vec!</span>[<span class="self">self</span>.topic];
+<a href=#48 id=48 data-nosnippet>48</a>        topics.push(<span class="self">self</span>.entity_id);
+<a href=#49 id=49 data-nosnippet>49</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = <span class="self">self</span>.additional_data {
+<a href=#50 id=50 data-nosnippet>50</a>            topics.push(data);
+<a href=#51 id=51 data-nosnippet>51</a>        }
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>        <span class="kw">let </span>inner =
+<a href=#54 id=54 data-nosnippet>54</a>            alloy::primitives::Log::new(<span class="self">self</span>.address, topics, alloy::primitives::Bytes::new())
+<a href=#55 id=55 data-nosnippet>55</a>                .unwrap_or_else(|| alloy::primitives::Log::empty());
+<a href=#56 id=56 data-nosnippet>56</a>
+<a href=#57 id=57 data-nosnippet>57</a>        Log {
+<a href=#58 id=58 data-nosnippet>58</a>            inner,
+<a href=#59 id=59 data-nosnippet>59</a>            block_timestamp: <span class="prelude-val">None</span>, <span class="comment">// We don't have timestamp in our LogEvent
+<a href=#60 id=60 data-nosnippet>60</a>            </span>block_number: <span class="prelude-val">Some</span>(<span class="self">self</span>.block_number),
+<a href=#61 id=61 data-nosnippet>61</a>            transaction_hash: <span class="prelude-val">Some</span>(<span class="self">self</span>.transaction_hash),
+<a href=#62 id=62 data-nosnippet>62</a>            transaction_index: <span class="prelude-val">Some</span>(<span class="self">self</span>.transaction_index),
+<a href=#63 id=63 data-nosnippet>63</a>            log_index: <span class="prelude-val">Some</span>(<span class="self">self</span>.log_index),
+<a href=#64 id=64 data-nosnippet>64</a>            block_hash: <span class="prelude-val">Some</span>(<span class="self">self</span>.block_hash),
+<a href=#65 id=65 data-nosnippet>65</a>            removed: <span class="bool-val">false</span>,
+<a href=#66 id=66 data-nosnippet>66</a>        }
+<a href=#67 id=67 data-nosnippet>67</a>    }
+<a href=#68 id=68 data-nosnippet>68</a>}
+<a href=#69 id=69 data-nosnippet>69</a>
+<a href=#70 id=70 data-nosnippet>70</a><span class="doccomment">/// Simple filter for event subscriptions
+<a href=#71 id=71 data-nosnippet>71</a></span><span class="attr">#[derive(Debug, Clone, derive_more::Display)]
+<a href=#72 id=72 data-nosnippet>72</a>#[display(<span class="string">"EventFilter(topics: {}, from_block: {}, to_block: {})"</span>, display_topics(topics), from_block.display(), to_block.display())]
+<a href=#73 id=73 data-nosnippet>73</a></span><span class="kw">pub struct </span>EventFilter {
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="doccomment">/// Contract addresses to filter by
+<a href=#75 id=75 data-nosnippet>75</a>    </span><span class="kw">pub </span>addresses: FilterSet&lt;Address&gt;,
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="doccomment">/// Event topics to filter by
+<a href=#77 id=77 data-nosnippet>77</a>    </span><span class="kw">pub </span>topics: Vec&lt;FilterSet&lt;B256&gt;&gt;,
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="doccomment">/// Block range to filter by
+<a href=#79 id=79 data-nosnippet>79</a>    </span><span class="kw">pub </span>from_block: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">pub </span>to_block: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+<a href=#81 id=81 data-nosnippet>81</a>}
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a><span class="doccomment">/// Trait for handling entity events
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="attr">#[async_trait::async_trait]
+<a href=#85 id=85 data-nosnippet>85</a></span><span class="kw">pub trait </span>EntityEventHandler: Send + Sync {
+<a href=#86 id=86 data-nosnippet>86</a>    <span class="kw">async fn </span>on_entity_created(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">async fn </span>on_entity_updated(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">async fn </span>on_entity_removed(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction);
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="doccomment">/// Finish processing a block and emit all collected logs with proper indices
+<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">async fn </span>finish_block(<span class="kw-2">&amp;</span><span class="self">self</span>, block_number: u64);
+<a href=#91 id=91 data-nosnippet>91</a>}
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a><span class="doccomment">/// Information about a subscription including its filter
+<a href=#94 id=94 data-nosnippet>94</a></span><span class="attr">#[derive(Clone)]
+<a href=#95 id=95 data-nosnippet>95</a></span><span class="kw">struct </span>SubscriptionInfo {
+<a href=#96 id=96 data-nosnippet>96</a>    sender: broadcast::Sender&lt;LogEvent&gt;,
+<a href=#97 id=97 data-nosnippet>97</a>    filter: <span class="prelude-ty">Option</span>&lt;EventFilter&gt;,
+<a href=#98 id=98 data-nosnippet>98</a>}
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a><span class="kw">impl </span>SubscriptionInfo {
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="doccomment">/// Send a log event to the subscription with logging
+<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="kw">fn </span>emit_event(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: <span class="kw-2">&amp;</span>LogEvent) {
+<a href=#103 id=103 data-nosnippet>103</a>        <span class="kw">let _ </span>= <span class="self">self</span>.sender.send(log_event.clone());
+<a href=#104 id=104 data-nosnippet>104</a>        <span class="macro">log::info!</span>(
+<a href=#105 id=105 data-nosnippet>105</a>            <span class="string">"Sent event to subscription: block={}, tx={}, log_index={}, entity_id={}"</span>,
+<a href=#106 id=106 data-nosnippet>106</a>            log_event.block_number,
+<a href=#107 id=107 data-nosnippet>107</a>            log_event.transaction_hash,
+<a href=#108 id=108 data-nosnippet>108</a>            log_event.log_index,
+<a href=#109 id=109 data-nosnippet>109</a>            log_event.entity_id
+<a href=#110 id=110 data-nosnippet>110</a>        );
+<a href=#111 id=111 data-nosnippet>111</a>    }
+<a href=#112 id=112 data-nosnippet>112</a>}
+<a href=#113 id=113 data-nosnippet>113</a>
+<a href=#114 id=114 data-nosnippet>114</a><span class="doccomment">/// Inner state of the EventEmitter, wrapped in a single RwLock
+<a href=#115 id=115 data-nosnippet>115</a></span><span class="attr">#[derive(Default)]
+<a href=#116 id=116 data-nosnippet>116</a></span><span class="kw">struct </span>EventEmitterState {
+<a href=#117 id=117 data-nosnippet>117</a>    subscriptions: HashMap&lt;String, SubscriptionInfo&gt;,
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="doccomment">/// Pending logs per block, waiting to be emitted with proper indices
+<a href=#119 id=119 data-nosnippet>119</a>    </span>pending_logs: HashMap&lt;u64, Vec&lt;LogEvent&gt;&gt;,
+<a href=#120 id=120 data-nosnippet>120</a>}
+<a href=#121 id=121 data-nosnippet>121</a>
+<a href=#122 id=122 data-nosnippet>122</a><span class="doccomment">/// Event emission system for GolemBase mock
+<a href=#123 id=123 data-nosnippet>123</a></span><span class="attr">#[derive(Clone, Default)]
+<a href=#124 id=124 data-nosnippet>124</a></span><span class="kw">pub struct </span>EventEmitter {
+<a href=#125 id=125 data-nosnippet>125</a>    state: Arc&lt;RwLock&lt;EventEmitterState&gt;&gt;,
+<a href=#126 id=126 data-nosnippet>126</a>}
+<a href=#127 id=127 data-nosnippet>127</a>
+<a href=#128 id=128 data-nosnippet>128</a><span class="kw">impl </span>EventEmitter {
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="doccomment">/// Create a new event emitter
+<a href=#130 id=130 data-nosnippet>130</a>    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+<a href=#131 id=131 data-nosnippet>131</a>        <span class="self">Self</span>::default()
+<a href=#132 id=132 data-nosnippet>132</a>    }
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="doccomment">/// Generate a unique subscription ID
+<a href=#135 id=135 data-nosnippet>135</a>    </span><span class="kw">fn </span>generate_subscription_id() -&gt; String {
+<a href=#136 id=136 data-nosnippet>136</a>        <span class="macro">format!</span>(
+<a href=#137 id=137 data-nosnippet>137</a>            <span class="string">"events_{}"</span>,
+<a href=#138 id=138 data-nosnippet>138</a>            SystemTime::now()
+<a href=#139 id=139 data-nosnippet>139</a>                .duration_since(UNIX_EPOCH)
+<a href=#140 id=140 data-nosnippet>140</a>                .unwrap()
+<a href=#141 id=141 data-nosnippet>141</a>                .as_nanos()
+<a href=#142 id=142 data-nosnippet>142</a>        )
+<a href=#143 id=143 data-nosnippet>143</a>    }
+<a href=#144 id=144 data-nosnippet>144</a>
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="doccomment">/// Get the latest block number from the state
+<a href=#146 id=146 data-nosnippet>146</a>    </span><span class="kw">async fn </span>get_latest_block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
+<a href=#148 id=148 data-nosnippet>148</a>        state.pending_logs.keys().max().copied().unwrap_or(<span class="number">0</span>)
+<a href=#149 id=149 data-nosnippet>149</a>    }
+<a href=#150 id=150 data-nosnippet>150</a>
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="doccomment">/// Extract block range from Filter
+<a href=#152 id=152 data-nosnippet>152</a>    </span><span class="kw">async fn </span>extract_block_range(
+<a href=#153 id=153 data-nosnippet>153</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#154 id=154 data-nosnippet>154</a>        filter: <span class="kw-2">&amp;</span>Filter,
+<a href=#155 id=155 data-nosnippet>155</a>    ) -&gt; anyhow::Result&lt;(<span class="prelude-ty">Option</span>&lt;u64&gt;, <span class="prelude-ty">Option</span>&lt;u64&gt;)&gt; {
+<a href=#156 id=156 data-nosnippet>156</a>        <span class="kw">let </span>latest = <span class="self">self</span>.get_latest_block_number().<span class="kw">await</span>;
+<a href=#157 id=157 data-nosnippet>157</a>
+<a href=#158 id=158 data-nosnippet>158</a>        <span class="kw">match </span><span class="kw-2">&amp;</span>filter.block_option {
+<a href=#159 id=159 data-nosnippet>159</a>            FilterBlockOption::Range {
+<a href=#160 id=160 data-nosnippet>160</a>                from_block,
+<a href=#161 id=161 data-nosnippet>161</a>                to_block,
+<a href=#162 id=162 data-nosnippet>162</a>            } =&gt; {
+<a href=#163 id=163 data-nosnippet>163</a>                <span class="kw">let </span>from = from_block.and_then(|b| <span class="self">self</span>.extract_block_number(<span class="kw-2">&amp;</span>b, latest));
+<a href=#164 id=164 data-nosnippet>164</a>                <span class="kw">let </span>to = to_block.and_then(|b| <span class="self">self</span>.extract_block_number(<span class="kw-2">&amp;</span>b, latest));
+<a href=#165 id=165 data-nosnippet>165</a>                <span class="prelude-val">Ok</span>((from, to))
 <a href=#166 id=166 data-nosnippet>166</a>            }
-<a href=#167 id=167 data-nosnippet>167</a>        }
-<a href=#168 id=168 data-nosnippet>168</a>    }
-<a href=#169 id=169 data-nosnippet>169</a>
-<a href=#170 id=170 data-nosnippet>170</a>    <span class="doccomment">/// Extract block number from BlockNumberOrTag
-<a href=#171 id=171 data-nosnippet>171</a>    </span><span class="kw">fn </span>extract_block_number(
-<a href=#172 id=172 data-nosnippet>172</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#173 id=173 data-nosnippet>173</a>        block_tag: <span class="kw-2">&amp;</span>BlockNumberOrTag,
-<a href=#174 id=174 data-nosnippet>174</a>        latest_block_number: u64,
-<a href=#175 id=175 data-nosnippet>175</a>    ) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw">match </span>block_tag {
-<a href=#177 id=177 data-nosnippet>177</a>            BlockNumberOrTag::Number(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
-<a href=#178 id=178 data-nosnippet>178</a>            BlockNumberOrTag::Earliest =&gt; <span class="prelude-val">Some</span>(<span class="number">0</span>),
-<a href=#179 id=179 data-nosnippet>179</a>            <span class="comment">// Latest, Finalized, Safe all map to the current latest block number
-<a href=#180 id=180 data-nosnippet>180</a>            // since we treat them as equivalent in our mock implementation
-<a href=#181 id=181 data-nosnippet>181</a>            </span>BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe =&gt; {
-<a href=#182 id=182 data-nosnippet>182</a>                <span class="prelude-val">Some</span>(latest_block_number)
-<a href=#183 id=183 data-nosnippet>183</a>            }
-<a href=#184 id=184 data-nosnippet>184</a>            <span class="comment">// Pending is relative to current state - we can't extract specific numbers
-<a href=#185 id=185 data-nosnippet>185</a>            </span>BlockNumberOrTag::Pending =&gt; <span class="prelude-val">None</span>,
-<a href=#186 id=186 data-nosnippet>186</a>        }
-<a href=#187 id=187 data-nosnippet>187</a>    }
-<a href=#188 id=188 data-nosnippet>188</a>
-<a href=#189 id=189 data-nosnippet>189</a>    <span class="doccomment">/// Add a log event to the pending logs for a block
-<a href=#190 id=190 data-nosnippet>190</a>    </span><span class="kw">async fn </span>add_pending_log(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>log_event: LogEvent) {
-<a href=#191 id=191 data-nosnippet>191</a>        <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="self">self</span>.state.write().<span class="kw">await</span>;
-<a href=#192 id=192 data-nosnippet>192</a>        <span class="kw">let </span>block_logs = state
-<a href=#193 id=193 data-nosnippet>193</a>            .pending_logs
-<a href=#194 id=194 data-nosnippet>194</a>            .entry(log_event.block_number)
-<a href=#195 id=195 data-nosnippet>195</a>            .or_insert_with(Vec::new);
-<a href=#196 id=196 data-nosnippet>196</a>
-<a href=#197 id=197 data-nosnippet>197</a>        <span class="comment">// Set log index to the current position in the vector
-<a href=#198 id=198 data-nosnippet>198</a>        </span>log_event.log_index = block_logs.len() <span class="kw">as </span>u64;
-<a href=#199 id=199 data-nosnippet>199</a>        block_logs.push(log_event);
-<a href=#200 id=200 data-nosnippet>200</a>    }
-<a href=#201 id=201 data-nosnippet>201</a>
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="doccomment">/// Emit a log event to all subscribers, applying their individual filters
-<a href=#203 id=203 data-nosnippet>203</a>    </span><span class="kw">async fn </span>emit_log_event(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: LogEvent) {
-<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
-<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">for </span>(<span class="kw">_</span>, subscription_info) <span class="kw">in </span>state.subscriptions.iter() {
-<a href=#206 id=206 data-nosnippet>206</a>            <span class="comment">// Check if event matches the subscription's filter
-<a href=#207 id=207 data-nosnippet>207</a>            </span><span class="kw">let </span>should_send = <span class="kw">match </span><span class="kw-2">&amp;</span>subscription_info.filter {
-<a href=#208 id=208 data-nosnippet>208</a>                <span class="prelude-val">Some</span>(filter) =&gt; <span class="self">self</span>.log_event_matches_filter(<span class="kw-2">&amp;</span>log_event, filter),
-<a href=#209 id=209 data-nosnippet>209</a>                <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
-<a href=#210 id=210 data-nosnippet>210</a>            };
-<a href=#211 id=211 data-nosnippet>211</a>
-<a href=#212 id=212 data-nosnippet>212</a>            <span class="kw">if </span>should_send {
-<a href=#213 id=213 data-nosnippet>213</a>                subscription_info.emit_event(<span class="kw-2">&amp;</span>log_event);
-<a href=#214 id=214 data-nosnippet>214</a>            }
-<a href=#215 id=215 data-nosnippet>215</a>        }
-<a href=#216 id=216 data-nosnippet>216</a>    }
-<a href=#217 id=217 data-nosnippet>217</a>
-<a href=#218 id=218 data-nosnippet>218</a>    <span class="doccomment">/// Subscribe to events with an optional filter
-<a href=#219 id=219 data-nosnippet>219</a>    </span><span class="kw">pub async fn </span>subscribe_to_events(
-<a href=#220 id=220 data-nosnippet>220</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#221 id=221 data-nosnippet>221</a>        filter: <span class="prelude-ty">Option</span>&lt;Filter&gt;,
-<a href=#222 id=222 data-nosnippet>222</a>    ) -&gt; anyhow::Result&lt;broadcast::Receiver&lt;LogEvent&gt;&gt; {
-<a href=#223 id=223 data-nosnippet>223</a>        <span class="kw">let </span>subscription_id = <span class="self">Self</span>::generate_subscription_id();
-<a href=#224 id=224 data-nosnippet>224</a>        <span class="kw">let </span>(sender, receiver) = broadcast::channel(<span class="number">1000</span>); <span class="comment">// Buffer up to 1000 events
-<a href=#225 id=225 data-nosnippet>225</a>
-<a href=#226 id=226 data-nosnippet>226</a>        </span><span class="kw">let </span>event_filter = <span class="kw">match </span>filter {
-<a href=#227 id=227 data-nosnippet>227</a>            <span class="prelude-val">Some</span>(f) =&gt; {
-<a href=#228 id=228 data-nosnippet>228</a>                <span class="kw">let </span>(from_block, to_block) = <span class="self">self</span>.extract_block_range(<span class="kw-2">&amp;</span>f).<span class="kw">await</span><span class="question-mark">?</span>;
-<a href=#229 id=229 data-nosnippet>229</a>                <span class="prelude-val">Some</span>(EventFilter {
-<a href=#230 id=230 data-nosnippet>230</a>                    addresses: f.address.clone(),
-<a href=#231 id=231 data-nosnippet>231</a>                    topics: f.topics.iter().cloned().collect(),
-<a href=#232 id=232 data-nosnippet>232</a>                    from_block,
-<a href=#233 id=233 data-nosnippet>233</a>                    to_block,
-<a href=#234 id=234 data-nosnippet>234</a>                })
-<a href=#235 id=235 data-nosnippet>235</a>            }
-<a href=#236 id=236 data-nosnippet>236</a>            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#237 id=237 data-nosnippet>237</a>        };
-<a href=#238 id=238 data-nosnippet>238</a>
-<a href=#239 id=239 data-nosnippet>239</a>        <span class="kw">let </span>subscription_info = SubscriptionInfo {
-<a href=#240 id=240 data-nosnippet>240</a>            sender: sender.clone(),
-<a href=#241 id=241 data-nosnippet>241</a>            filter: event_filter.clone(),
-<a href=#242 id=242 data-nosnippet>242</a>        };
-<a href=#243 id=243 data-nosnippet>243</a>
-<a href=#244 id=244 data-nosnippet>244</a>        <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="self">self</span>.state.write().<span class="kw">await</span>;
-<a href=#245 id=245 data-nosnippet>245</a>        state
-<a href=#246 id=246 data-nosnippet>246</a>            .subscriptions
-<a href=#247 id=247 data-nosnippet>247</a>            .insert(subscription_id, subscription_info.clone());
-<a href=#248 id=248 data-nosnippet>248</a>
-<a href=#249 id=249 data-nosnippet>249</a>        <span class="macro">log::info!</span>(<span class="string">"Created subscription for events with filter: {event_filter:?}"</span>);
-<a href=#250 id=250 data-nosnippet>250</a>
-<a href=#251 id=251 data-nosnippet>251</a>        <span class="comment">// Emit events from past blocks if they match the filter
-<a href=#252 id=252 data-nosnippet>252</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(filter) = <span class="kw-2">&amp;</span>event_filter {
-<a href=#253 id=253 data-nosnippet>253</a>            <span class="macro">log::info!</span>(<span class="string">"Emitting events from past blocks using filter: {filter:?}"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>            <span class="self">self</span>.emit_past_blocks(<span class="kw-2">&amp;</span>subscription_info, filter, <span class="kw-2">&amp;</span>state)
-<a href=#255 id=255 data-nosnippet>255</a>                .<span class="kw">await</span>;
-<a href=#256 id=256 data-nosnippet>256</a>        }
+<a href=#167 id=167 data-nosnippet>167</a>            FilterBlockOption::AtBlockHash(<span class="kw">_</span>) =&gt; {
+<a href=#168 id=168 data-nosnippet>168</a>                <span class="comment">// Single block hash - we can't resolve the hash to a block number
+<a href=#169 id=169 data-nosnippet>169</a>                </span><span class="macro">anyhow::bail!</span>(<span class="string">"[Not implemented] Cannot return events for a block hash"</span>)
+<a href=#170 id=170 data-nosnippet>170</a>            }
+<a href=#171 id=171 data-nosnippet>171</a>        }
+<a href=#172 id=172 data-nosnippet>172</a>    }
+<a href=#173 id=173 data-nosnippet>173</a>
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="doccomment">/// Extract block number from BlockNumberOrTag
+<a href=#175 id=175 data-nosnippet>175</a>    </span><span class="kw">fn </span>extract_block_number(
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#177 id=177 data-nosnippet>177</a>        block_tag: <span class="kw-2">&amp;</span>BlockNumberOrTag,
+<a href=#178 id=178 data-nosnippet>178</a>        latest_block_number: u64,
+<a href=#179 id=179 data-nosnippet>179</a>    ) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#180 id=180 data-nosnippet>180</a>        <span class="kw">match </span>block_tag {
+<a href=#181 id=181 data-nosnippet>181</a>            BlockNumberOrTag::Number(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
+<a href=#182 id=182 data-nosnippet>182</a>            BlockNumberOrTag::Earliest =&gt; <span class="prelude-val">Some</span>(<span class="number">0</span>),
+<a href=#183 id=183 data-nosnippet>183</a>            <span class="comment">// Latest, Finalized, Safe all map to the current latest block number
+<a href=#184 id=184 data-nosnippet>184</a>            // since we treat them as equivalent in our mock implementation
+<a href=#185 id=185 data-nosnippet>185</a>            </span>BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe =&gt; {
+<a href=#186 id=186 data-nosnippet>186</a>                <span class="prelude-val">Some</span>(latest_block_number)
+<a href=#187 id=187 data-nosnippet>187</a>            }
+<a href=#188 id=188 data-nosnippet>188</a>            <span class="comment">// Pending is relative to current state - we can't extract specific numbers
+<a href=#189 id=189 data-nosnippet>189</a>            </span>BlockNumberOrTag::Pending =&gt; <span class="prelude-val">None</span>,
+<a href=#190 id=190 data-nosnippet>190</a>        }
+<a href=#191 id=191 data-nosnippet>191</a>    }
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="doccomment">/// Add a log event to the pending logs for a block
+<a href=#194 id=194 data-nosnippet>194</a>    </span><span class="kw">async fn </span>add_pending_log(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>log_event: LogEvent) {
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="self">self</span>.state.write().<span class="kw">await</span>;
+<a href=#196 id=196 data-nosnippet>196</a>        <span class="kw">let </span>block_logs = state
+<a href=#197 id=197 data-nosnippet>197</a>            .pending_logs
+<a href=#198 id=198 data-nosnippet>198</a>            .entry(log_event.block_number)
+<a href=#199 id=199 data-nosnippet>199</a>            .or_insert_with(Vec::new);
+<a href=#200 id=200 data-nosnippet>200</a>
+<a href=#201 id=201 data-nosnippet>201</a>        <span class="comment">// Set log index to the current position in the vector
+<a href=#202 id=202 data-nosnippet>202</a>        </span>log_event.log_index = block_logs.len() <span class="kw">as </span>u64;
+<a href=#203 id=203 data-nosnippet>203</a>        block_logs.push(log_event);
+<a href=#204 id=204 data-nosnippet>204</a>    }
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="doccomment">/// Emit a log event to all subscribers, applying their individual filters
+<a href=#207 id=207 data-nosnippet>207</a>    </span><span class="kw">async fn </span>emit_log_event(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: LogEvent) {
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
+<a href=#209 id=209 data-nosnippet>209</a>        <span class="kw">for </span>(<span class="kw">_</span>, subscription_info) <span class="kw">in </span>state.subscriptions.iter() {
+<a href=#210 id=210 data-nosnippet>210</a>            <span class="comment">// Check if event matches the subscription's filter
+<a href=#211 id=211 data-nosnippet>211</a>            </span><span class="kw">let </span>should_send = <span class="kw">match </span><span class="kw-2">&amp;</span>subscription_info.filter {
+<a href=#212 id=212 data-nosnippet>212</a>                <span class="prelude-val">Some</span>(filter) =&gt; <span class="self">self</span>.log_event_matches_filter(<span class="kw-2">&amp;</span>log_event, filter),
+<a href=#213 id=213 data-nosnippet>213</a>                <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#214 id=214 data-nosnippet>214</a>            };
+<a href=#215 id=215 data-nosnippet>215</a>
+<a href=#216 id=216 data-nosnippet>216</a>            <span class="kw">if </span>should_send {
+<a href=#217 id=217 data-nosnippet>217</a>                subscription_info.emit_event(<span class="kw-2">&amp;</span>log_event);
+<a href=#218 id=218 data-nosnippet>218</a>            }
+<a href=#219 id=219 data-nosnippet>219</a>        }
+<a href=#220 id=220 data-nosnippet>220</a>    }
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="doccomment">/// Subscribe to events with an optional filter
+<a href=#223 id=223 data-nosnippet>223</a>    </span><span class="kw">pub async fn </span>subscribe_to_events(
+<a href=#224 id=224 data-nosnippet>224</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#225 id=225 data-nosnippet>225</a>        filter: <span class="prelude-ty">Option</span>&lt;Filter&gt;,
+<a href=#226 id=226 data-nosnippet>226</a>    ) -&gt; anyhow::Result&lt;broadcast::Receiver&lt;LogEvent&gt;&gt; {
+<a href=#227 id=227 data-nosnippet>227</a>        <span class="kw">let </span>subscription_id = <span class="self">Self</span>::generate_subscription_id();
+<a href=#228 id=228 data-nosnippet>228</a>        <span class="kw">let </span>(sender, receiver) = broadcast::channel(<span class="number">1000</span>); <span class="comment">// Buffer up to 1000 events
+<a href=#229 id=229 data-nosnippet>229</a>
+<a href=#230 id=230 data-nosnippet>230</a>        </span><span class="kw">let </span>event_filter = <span class="kw">match </span>filter {
+<a href=#231 id=231 data-nosnippet>231</a>            <span class="prelude-val">Some</span>(f) =&gt; {
+<a href=#232 id=232 data-nosnippet>232</a>                <span class="kw">let </span>(from_block, to_block) = <span class="self">self</span>.extract_block_range(<span class="kw-2">&amp;</span>f).<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#233 id=233 data-nosnippet>233</a>                <span class="prelude-val">Some</span>(EventFilter {
+<a href=#234 id=234 data-nosnippet>234</a>                    addresses: f.address.clone(),
+<a href=#235 id=235 data-nosnippet>235</a>                    topics: f.topics.iter().cloned().collect(),
+<a href=#236 id=236 data-nosnippet>236</a>                    from_block,
+<a href=#237 id=237 data-nosnippet>237</a>                    to_block,
+<a href=#238 id=238 data-nosnippet>238</a>                })
+<a href=#239 id=239 data-nosnippet>239</a>            }
+<a href=#240 id=240 data-nosnippet>240</a>            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#241 id=241 data-nosnippet>241</a>        };
+<a href=#242 id=242 data-nosnippet>242</a>
+<a href=#243 id=243 data-nosnippet>243</a>        <span class="kw">let </span>subscription_info = SubscriptionInfo {
+<a href=#244 id=244 data-nosnippet>244</a>            sender: sender.clone(),
+<a href=#245 id=245 data-nosnippet>245</a>            filter: event_filter.clone(),
+<a href=#246 id=246 data-nosnippet>246</a>        };
+<a href=#247 id=247 data-nosnippet>247</a>
+<a href=#248 id=248 data-nosnippet>248</a>        <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="self">self</span>.state.write().<span class="kw">await</span>;
+<a href=#249 id=249 data-nosnippet>249</a>        state
+<a href=#250 id=250 data-nosnippet>250</a>            .subscriptions
+<a href=#251 id=251 data-nosnippet>251</a>            .insert(subscription_id, subscription_info.clone());
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a>        <span class="macro">log::info!</span>(
+<a href=#254 id=254 data-nosnippet>254</a>            <span class="string">"Created subscription for events with filter: {}"</span>,
+<a href=#255 id=255 data-nosnippet>255</a>            event_filter.display()
+<a href=#256 id=256 data-nosnippet>256</a>        );
 <a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>        <span class="prelude-val">Ok</span>(receiver)
-<a href=#259 id=259 data-nosnippet>259</a>    }
-<a href=#260 id=260 data-nosnippet>260</a>
-<a href=#261 id=261 data-nosnippet>261</a>    <span class="doccomment">/// Emit events from past blocks that match the filter
-<a href=#262 id=262 data-nosnippet>262</a>    </span><span class="kw">async fn </span>emit_past_blocks(
-<a href=#263 id=263 data-nosnippet>263</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#264 id=264 data-nosnippet>264</a>        subscription_info: <span class="kw-2">&amp;</span>SubscriptionInfo,
-<a href=#265 id=265 data-nosnippet>265</a>        filter: <span class="kw-2">&amp;</span>EventFilter,
-<a href=#266 id=266 data-nosnippet>266</a>        state: <span class="kw-2">&amp;</span>EventEmitterState,
-<a href=#267 id=267 data-nosnippet>267</a>    ) {
-<a href=#268 id=268 data-nosnippet>268</a>        <span class="kw">for </span>(<span class="kw">_</span>, logs) <span class="kw">in </span><span class="kw-2">&amp;</span>state.pending_logs {
-<a href=#269 id=269 data-nosnippet>269</a>            <span class="comment">// Emit logs that match the filter (which includes block range)
-<a href=#270 id=270 data-nosnippet>270</a>            </span><span class="kw">for </span>log_event <span class="kw">in </span>logs {
-<a href=#271 id=271 data-nosnippet>271</a>                <span class="kw">if </span><span class="self">self</span>.log_event_matches_filter(log_event, filter) {
-<a href=#272 id=272 data-nosnippet>272</a>                    subscription_info.emit_event(log_event);
-<a href=#273 id=273 data-nosnippet>273</a>                }
-<a href=#274 id=274 data-nosnippet>274</a>            }
-<a href=#275 id=275 data-nosnippet>275</a>        }
-<a href=#276 id=276 data-nosnippet>276</a>    }
-<a href=#277 id=277 data-nosnippet>277</a>
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="doccomment">/// Check if a log event matches the given filter
-<a href=#279 id=279 data-nosnippet>279</a>    </span><span class="kw">fn </span>log_event_matches_filter(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: <span class="kw-2">&amp;</span>LogEvent, filter: <span class="kw-2">&amp;</span>EventFilter) -&gt; bool {
-<a href=#280 id=280 data-nosnippet>280</a>        <span class="comment">// Check block range first
-<a href=#281 id=281 data-nosnippet>281</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(from_block) = filter.from_block {
-<a href=#282 id=282 data-nosnippet>282</a>            <span class="kw">if </span>log_event.block_number &lt; from_block {
-<a href=#283 id=283 data-nosnippet>283</a>                <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#284 id=284 data-nosnippet>284</a>            }
-<a href=#285 id=285 data-nosnippet>285</a>        }
-<a href=#286 id=286 data-nosnippet>286</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(to_block) = filter.to_block {
-<a href=#287 id=287 data-nosnippet>287</a>            <span class="kw">if </span>log_event.block_number &gt; to_block {
-<a href=#288 id=288 data-nosnippet>288</a>                <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#289 id=289 data-nosnippet>289</a>            }
-<a href=#290 id=290 data-nosnippet>290</a>        }
-<a href=#291 id=291 data-nosnippet>291</a>
-<a href=#292 id=292 data-nosnippet>292</a>        <span class="comment">// Check if filter has any address restrictions
-<a href=#293 id=293 data-nosnippet>293</a>        </span><span class="kw">if </span>!filter.addresses.is_empty() {
-<a href=#294 id=294 data-nosnippet>294</a>            <span class="comment">// Check if the log event address matches any of the filter addresses
-<a href=#295 id=295 data-nosnippet>295</a>            </span><span class="kw">let </span>address_matches = filter.addresses.contains(<span class="kw-2">&amp;</span>log_event.address);
-<a href=#296 id=296 data-nosnippet>296</a>            <span class="kw">if </span>!address_matches {
-<a href=#297 id=297 data-nosnippet>297</a>                <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#298 id=298 data-nosnippet>298</a>            }
-<a href=#299 id=299 data-nosnippet>299</a>        }
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>        <span class="comment">// Check if filter has any topic restrictions
-<a href=#302 id=302 data-nosnippet>302</a>        </span><span class="kw">if </span>!filter.topics.is_empty() {
-<a href=#303 id=303 data-nosnippet>303</a>            <span class="comment">// Check if the event topic matches any of the filter topics
-<a href=#304 id=304 data-nosnippet>304</a>            // Topics is a Vec&lt;FilterSet&lt;B256&gt;&gt;, so we need to check if any FilterSet contains the topic
-<a href=#305 id=305 data-nosnippet>305</a>            </span><span class="kw">let </span>topic_matches = filter
-<a href=#306 id=306 data-nosnippet>306</a>                .topics
-<a href=#307 id=307 data-nosnippet>307</a>                .iter()
-<a href=#308 id=308 data-nosnippet>308</a>                .any(|topic_set| topic_set.contains(<span class="kw-2">&amp;</span>log_event.topic));
-<a href=#309 id=309 data-nosnippet>309</a>            <span class="kw">if </span>!topic_matches {
-<a href=#310 id=310 data-nosnippet>310</a>                <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#311 id=311 data-nosnippet>311</a>            }
-<a href=#312 id=312 data-nosnippet>312</a>        }
-<a href=#313 id=313 data-nosnippet>313</a>
-<a href=#314 id=314 data-nosnippet>314</a>        <span class="bool-val">true
-<a href=#315 id=315 data-nosnippet>315</a>    </span>}
-<a href=#316 id=316 data-nosnippet>316</a>}
-<a href=#317 id=317 data-nosnippet>317</a>
-<a href=#318 id=318 data-nosnippet>318</a><span class="attr">#[async_trait::async_trait]
-<a href=#319 id=319 data-nosnippet>319</a></span><span class="kw">impl </span>EntityEventHandler <span class="kw">for </span>EventEmitter {
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">async fn </span>on_entity_created(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
-<a href=#321 id=321 data-nosnippet>321</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
-<a href=#322 id=322 data-nosnippet>322</a>
-<a href=#323 id=323 data-nosnippet>323</a>        <span class="kw">let </span>log_event = LogEvent {
-<a href=#324 id=324 data-nosnippet>324</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-<a href=#325 id=325 data-nosnippet>325</a>            topic: golem_base_storage_entity_created(),
-<a href=#326 id=326 data-nosnippet>326</a>            entity_id: entity.key,
-<a href=#327 id=327 data-nosnippet>327</a>            additional_data: <span class="prelude-val">None</span>,
-<a href=#328 id=328 data-nosnippet>328</a>            block_number: block.header.block_number,
-<a href=#329 id=329 data-nosnippet>329</a>            transaction_hash: transaction.hash,
-<a href=#330 id=330 data-nosnippet>330</a>            transaction_index,
-<a href=#331 id=331 data-nosnippet>331</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
-<a href=#332 id=332 data-nosnippet>332</a>            </span>block_hash: block.header.block_hash,
-<a href=#333 id=333 data-nosnippet>333</a>        };
-<a href=#334 id=334 data-nosnippet>334</a>
-<a href=#335 id=335 data-nosnippet>335</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
-<a href=#336 id=336 data-nosnippet>336</a>    }
-<a href=#337 id=337 data-nosnippet>337</a>
-<a href=#338 id=338 data-nosnippet>338</a>    <span class="kw">async fn </span>on_entity_updated(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
-<a href=#339 id=339 data-nosnippet>339</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
-<a href=#340 id=340 data-nosnippet>340</a>
-<a href=#341 id=341 data-nosnippet>341</a>        <span class="kw">let </span>log_event = LogEvent {
-<a href=#342 id=342 data-nosnippet>342</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-<a href=#343 id=343 data-nosnippet>343</a>            topic: golem_base_storage_entity_updated(),
-<a href=#344 id=344 data-nosnippet>344</a>            entity_id: entity.key,
-<a href=#345 id=345 data-nosnippet>345</a>            additional_data: <span class="prelude-val">None</span>,
-<a href=#346 id=346 data-nosnippet>346</a>            block_number: block.header.block_number,
-<a href=#347 id=347 data-nosnippet>347</a>            transaction_hash: transaction.hash,
-<a href=#348 id=348 data-nosnippet>348</a>            transaction_index,
-<a href=#349 id=349 data-nosnippet>349</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
-<a href=#350 id=350 data-nosnippet>350</a>            </span>block_hash: block.header.block_hash,
-<a href=#351 id=351 data-nosnippet>351</a>        };
-<a href=#352 id=352 data-nosnippet>352</a>
-<a href=#353 id=353 data-nosnippet>353</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
-<a href=#354 id=354 data-nosnippet>354</a>    }
-<a href=#355 id=355 data-nosnippet>355</a>
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="kw">async fn </span>on_entity_removed(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
-<a href=#357 id=357 data-nosnippet>357</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
-<a href=#358 id=358 data-nosnippet>358</a>
-<a href=#359 id=359 data-nosnippet>359</a>        <span class="kw">let </span>log_event = LogEvent {
-<a href=#360 id=360 data-nosnippet>360</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-<a href=#361 id=361 data-nosnippet>361</a>            topic: golem_base_storage_entity_deleted(),
-<a href=#362 id=362 data-nosnippet>362</a>            entity_id: entity.key,
-<a href=#363 id=363 data-nosnippet>363</a>            additional_data: <span class="prelude-val">None</span>,
-<a href=#364 id=364 data-nosnippet>364</a>            block_number: block.header.block_number,
-<a href=#365 id=365 data-nosnippet>365</a>            transaction_hash: transaction.hash,
-<a href=#366 id=366 data-nosnippet>366</a>            transaction_index,
-<a href=#367 id=367 data-nosnippet>367</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
-<a href=#368 id=368 data-nosnippet>368</a>            </span>block_hash: block.header.block_hash,
-<a href=#369 id=369 data-nosnippet>369</a>        };
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
-<a href=#372 id=372 data-nosnippet>372</a>    }
-<a href=#373 id=373 data-nosnippet>373</a>
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">async fn </span>finish_block(<span class="kw-2">&amp;</span><span class="self">self</span>, block_number: u64) {
-<a href=#375 id=375 data-nosnippet>375</a>        <span class="kw">let </span>logs = {
-<a href=#376 id=376 data-nosnippet>376</a>            <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
-<a href=#377 id=377 data-nosnippet>377</a>            state.pending_logs.get(<span class="kw-2">&amp;</span>block_number).cloned()
-<a href=#378 id=378 data-nosnippet>378</a>        };
-<a href=#379 id=379 data-nosnippet>379</a>
-<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(logs) = logs {
-<a href=#381 id=381 data-nosnippet>381</a>            <span class="comment">// Emit all logs in the order they were added (already correct order)
-<a href=#382 id=382 data-nosnippet>382</a>            </span><span class="kw">for </span>log_event <span class="kw">in </span>logs {
-<a href=#383 id=383 data-nosnippet>383</a>                <span class="self">self</span>.emit_log_event(log_event).<span class="kw">await</span>;
-<a href=#384 id=384 data-nosnippet>384</a>            }
-<a href=#385 id=385 data-nosnippet>385</a>        }
-<a href=#386 id=386 data-nosnippet>386</a>    }
-<a href=#387 id=387 data-nosnippet>387</a>}</code></pre></div></section></main></body></html>
+<a href=#258 id=258 data-nosnippet>258</a>        <span class="comment">// Emit events from past blocks if they match the filter
+<a href=#259 id=259 data-nosnippet>259</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(filter) = <span class="kw-2">&amp;</span>event_filter {
+<a href=#260 id=260 data-nosnippet>260</a>            <span class="macro">log::info!</span>(<span class="string">"Emitting events from past blocks using filter: {filter}"</span>);
+<a href=#261 id=261 data-nosnippet>261</a>            <span class="self">self</span>.emit_past_blocks(<span class="kw-2">&amp;</span>subscription_info, filter, <span class="kw-2">&amp;</span>state)
+<a href=#262 id=262 data-nosnippet>262</a>                .<span class="kw">await</span>;
+<a href=#263 id=263 data-nosnippet>263</a>        }
+<a href=#264 id=264 data-nosnippet>264</a>
+<a href=#265 id=265 data-nosnippet>265</a>        <span class="prelude-val">Ok</span>(receiver)
+<a href=#266 id=266 data-nosnippet>266</a>    }
+<a href=#267 id=267 data-nosnippet>267</a>
+<a href=#268 id=268 data-nosnippet>268</a>    <span class="doccomment">/// Emit events from past blocks that match the filter
+<a href=#269 id=269 data-nosnippet>269</a>    </span><span class="kw">async fn </span>emit_past_blocks(
+<a href=#270 id=270 data-nosnippet>270</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#271 id=271 data-nosnippet>271</a>        subscription_info: <span class="kw-2">&amp;</span>SubscriptionInfo,
+<a href=#272 id=272 data-nosnippet>272</a>        filter: <span class="kw-2">&amp;</span>EventFilter,
+<a href=#273 id=273 data-nosnippet>273</a>        state: <span class="kw-2">&amp;</span>EventEmitterState,
+<a href=#274 id=274 data-nosnippet>274</a>    ) {
+<a href=#275 id=275 data-nosnippet>275</a>        <span class="kw">for </span>(<span class="kw">_</span>, logs) <span class="kw">in </span><span class="kw-2">&amp;</span>state.pending_logs {
+<a href=#276 id=276 data-nosnippet>276</a>            <span class="comment">// Emit logs that match the filter (which includes block range)
+<a href=#277 id=277 data-nosnippet>277</a>            </span><span class="kw">for </span>log_event <span class="kw">in </span>logs {
+<a href=#278 id=278 data-nosnippet>278</a>                <span class="kw">if </span><span class="self">self</span>.log_event_matches_filter(log_event, filter) {
+<a href=#279 id=279 data-nosnippet>279</a>                    subscription_info.emit_event(log_event);
+<a href=#280 id=280 data-nosnippet>280</a>                }
+<a href=#281 id=281 data-nosnippet>281</a>            }
+<a href=#282 id=282 data-nosnippet>282</a>        }
+<a href=#283 id=283 data-nosnippet>283</a>    }
+<a href=#284 id=284 data-nosnippet>284</a>
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="doccomment">/// Check if a log event matches the given filter
+<a href=#286 id=286 data-nosnippet>286</a>    </span><span class="kw">fn </span>log_event_matches_filter(<span class="kw-2">&amp;</span><span class="self">self</span>, log_event: <span class="kw-2">&amp;</span>LogEvent, filter: <span class="kw-2">&amp;</span>EventFilter) -&gt; bool {
+<a href=#287 id=287 data-nosnippet>287</a>        <span class="comment">// Check block range first
+<a href=#288 id=288 data-nosnippet>288</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(from_block) = filter.from_block {
+<a href=#289 id=289 data-nosnippet>289</a>            <span class="kw">if </span>log_event.block_number &lt; from_block {
+<a href=#290 id=290 data-nosnippet>290</a>                <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#291 id=291 data-nosnippet>291</a>            }
+<a href=#292 id=292 data-nosnippet>292</a>        }
+<a href=#293 id=293 data-nosnippet>293</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(to_block) = filter.to_block {
+<a href=#294 id=294 data-nosnippet>294</a>            <span class="kw">if </span>log_event.block_number &gt; to_block {
+<a href=#295 id=295 data-nosnippet>295</a>                <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#296 id=296 data-nosnippet>296</a>            }
+<a href=#297 id=297 data-nosnippet>297</a>        }
+<a href=#298 id=298 data-nosnippet>298</a>
+<a href=#299 id=299 data-nosnippet>299</a>        <span class="comment">// Check if filter has any address restrictions
+<a href=#300 id=300 data-nosnippet>300</a>        </span><span class="kw">if </span>!filter.addresses.is_empty() {
+<a href=#301 id=301 data-nosnippet>301</a>            <span class="comment">// Check if the log event address matches any of the filter addresses
+<a href=#302 id=302 data-nosnippet>302</a>            </span><span class="kw">let </span>address_matches = filter.addresses.contains(<span class="kw-2">&amp;</span>log_event.address);
+<a href=#303 id=303 data-nosnippet>303</a>            <span class="kw">if </span>!address_matches {
+<a href=#304 id=304 data-nosnippet>304</a>                <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#305 id=305 data-nosnippet>305</a>            }
+<a href=#306 id=306 data-nosnippet>306</a>        }
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>        <span class="comment">// Check if filter has any topic restrictions
+<a href=#309 id=309 data-nosnippet>309</a>        </span><span class="kw">if </span>!filter.topics.is_empty() {
+<a href=#310 id=310 data-nosnippet>310</a>            <span class="comment">// Check if the event topic matches any of the filter topics
+<a href=#311 id=311 data-nosnippet>311</a>            // Topics is a Vec&lt;FilterSet&lt;B256&gt;&gt;, so we need to check if any FilterSet contains the topic
+<a href=#312 id=312 data-nosnippet>312</a>            </span><span class="kw">let </span>topic_matches = filter
+<a href=#313 id=313 data-nosnippet>313</a>                .topics
+<a href=#314 id=314 data-nosnippet>314</a>                .iter()
+<a href=#315 id=315 data-nosnippet>315</a>                .any(|topic_set| topic_set.contains(<span class="kw-2">&amp;</span>log_event.topic));
+<a href=#316 id=316 data-nosnippet>316</a>            <span class="kw">if </span>!topic_matches {
+<a href=#317 id=317 data-nosnippet>317</a>                <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#318 id=318 data-nosnippet>318</a>            }
+<a href=#319 id=319 data-nosnippet>319</a>        }
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>        <span class="bool-val">true
+<a href=#322 id=322 data-nosnippet>322</a>    </span>}
+<a href=#323 id=323 data-nosnippet>323</a>}
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a><span class="attr">#[async_trait::async_trait]
+<a href=#326 id=326 data-nosnippet>326</a></span><span class="kw">impl </span>EntityEventHandler <span class="kw">for </span>EventEmitter {
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="kw">async fn </span>on_entity_created(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
+<a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a>        <span class="kw">let </span>log_event = LogEvent {
+<a href=#331 id=331 data-nosnippet>331</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
+<a href=#332 id=332 data-nosnippet>332</a>            topic: golem_base_storage_entity_created(),
+<a href=#333 id=333 data-nosnippet>333</a>            entity_id: entity.key,
+<a href=#334 id=334 data-nosnippet>334</a>            additional_data: <span class="prelude-val">None</span>,
+<a href=#335 id=335 data-nosnippet>335</a>            block_number: block.header.block_number,
+<a href=#336 id=336 data-nosnippet>336</a>            transaction_hash: transaction.hash,
+<a href=#337 id=337 data-nosnippet>337</a>            transaction_index,
+<a href=#338 id=338 data-nosnippet>338</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
+<a href=#339 id=339 data-nosnippet>339</a>            </span>block_hash: block.header.block_hash,
+<a href=#340 id=340 data-nosnippet>340</a>        };
+<a href=#341 id=341 data-nosnippet>341</a>
+<a href=#342 id=342 data-nosnippet>342</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
+<a href=#343 id=343 data-nosnippet>343</a>    }
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="kw">async fn </span>on_entity_updated(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
+<a href=#347 id=347 data-nosnippet>347</a>
+<a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">let </span>log_event = LogEvent {
+<a href=#349 id=349 data-nosnippet>349</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
+<a href=#350 id=350 data-nosnippet>350</a>            topic: golem_base_storage_entity_updated(),
+<a href=#351 id=351 data-nosnippet>351</a>            entity_id: entity.key,
+<a href=#352 id=352 data-nosnippet>352</a>            additional_data: <span class="prelude-val">None</span>,
+<a href=#353 id=353 data-nosnippet>353</a>            block_number: block.header.block_number,
+<a href=#354 id=354 data-nosnippet>354</a>            transaction_hash: transaction.hash,
+<a href=#355 id=355 data-nosnippet>355</a>            transaction_index,
+<a href=#356 id=356 data-nosnippet>356</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
+<a href=#357 id=357 data-nosnippet>357</a>            </span>block_hash: block.header.block_hash,
+<a href=#358 id=358 data-nosnippet>358</a>        };
+<a href=#359 id=359 data-nosnippet>359</a>
+<a href=#360 id=360 data-nosnippet>360</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
+<a href=#361 id=361 data-nosnippet>361</a>    }
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">async fn </span>on_entity_removed(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Entity, block: <span class="kw-2">&amp;</span>Block, transaction: <span class="kw-2">&amp;</span>Transaction) {
+<a href=#364 id=364 data-nosnippet>364</a>        <span class="kw">let </span>transaction_index = block.find_transaction_index(<span class="kw-2">&amp;</span>transaction.hash).unwrap_or(<span class="number">0</span>);
+<a href=#365 id=365 data-nosnippet>365</a>
+<a href=#366 id=366 data-nosnippet>366</a>        <span class="kw">let </span>log_event = LogEvent {
+<a href=#367 id=367 data-nosnippet>367</a>            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
+<a href=#368 id=368 data-nosnippet>368</a>            topic: golem_base_storage_entity_deleted(),
+<a href=#369 id=369 data-nosnippet>369</a>            entity_id: entity.key,
+<a href=#370 id=370 data-nosnippet>370</a>            additional_data: <span class="prelude-val">None</span>,
+<a href=#371 id=371 data-nosnippet>371</a>            block_number: block.header.block_number,
+<a href=#372 id=372 data-nosnippet>372</a>            transaction_hash: transaction.hash,
+<a href=#373 id=373 data-nosnippet>373</a>            transaction_index,
+<a href=#374 id=374 data-nosnippet>374</a>            log_index: <span class="number">0</span>, <span class="comment">// Will be set correctly in add_pending_log
+<a href=#375 id=375 data-nosnippet>375</a>            </span>block_hash: block.header.block_hash,
+<a href=#376 id=376 data-nosnippet>376</a>        };
+<a href=#377 id=377 data-nosnippet>377</a>
+<a href=#378 id=378 data-nosnippet>378</a>        <span class="self">self</span>.add_pending_log(log_event).<span class="kw">await</span>;
+<a href=#379 id=379 data-nosnippet>379</a>    }
+<a href=#380 id=380 data-nosnippet>380</a>
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">async fn </span>finish_block(<span class="kw-2">&amp;</span><span class="self">self</span>, block_number: u64) {
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="kw">let </span>logs = {
+<a href=#383 id=383 data-nosnippet>383</a>            <span class="kw">let </span>state = <span class="self">self</span>.state.read().<span class="kw">await</span>;
+<a href=#384 id=384 data-nosnippet>384</a>            state.pending_logs.get(<span class="kw-2">&amp;</span>block_number).cloned()
+<a href=#385 id=385 data-nosnippet>385</a>        };
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(logs) = logs {
+<a href=#388 id=388 data-nosnippet>388</a>            <span class="comment">// Emit all logs in the order they were added (already correct order)
+<a href=#389 id=389 data-nosnippet>389</a>            </span><span class="kw">for </span>log_event <span class="kw">in </span>logs {
+<a href=#390 id=390 data-nosnippet>390</a>                <span class="self">self</span>.emit_log_event(log_event).<span class="kw">await</span>;
+<a href=#391 id=391 data-nosnippet>391</a>            }
+<a href=#392 id=392 data-nosnippet>392</a>        }
+<a href=#393 id=393 data-nosnippet>393</a>    }
+<a href=#394 id=394 data-nosnippet>394</a>}</code></pre></div></section></main></body></html>

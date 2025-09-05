@@ -29,8 +29,8 @@
 <a href=#29 id=29 data-nosnippet>29</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.state.controller
 <a href=#30 id=30 data-nosnippet>30</a>    }
 <a href=#31 id=31 data-nosnippet>31</a>
-<a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">pub fn </span>with_chain_id(<span class="kw-2">mut </span><span class="self">self</span>, chain_id: u64) -&gt; <span class="self">Self </span>{
-<a href=#33 id=33 data-nosnippet>33</a>        <span class="self">self</span>.state.chain_id = U256::from(chain_id);
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">pub fn </span>with_chain_id(<span class="self">self</span>, chain_id: u64) -&gt; <span class="self">Self </span>{
+<a href=#33 id=33 data-nosnippet>33</a>        <span class="self">self</span>.state.set_chain_id(chain_id);
 <a href=#34 id=34 data-nosnippet>34</a>        <span class="self">self
 <a href=#35 id=35 data-nosnippet>35</a>    </span>}
 <a href=#36 id=36 data-nosnippet>36</a>
