@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["EventEmitter","EventFilter","LogEvent"],"trait":["EntityEventHandler"]};
