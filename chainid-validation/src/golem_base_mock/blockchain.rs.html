@@ -462,7 +462,7 @@
 <a href=#462 id=462 data-nosnippet>462</a>        <span class="kw">let </span>actual_chain_id = <span class="self">self</span>.chain_id();
 <a href=#463 id=463 data-nosnippet>463</a>        <span class="kw">if </span>tx_chain_id != actual_chain_id {
 <a href=#464 id=464 data-nosnippet>464</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
-<a href=#465 id=465 data-nosnippet>465</a>                <span class="string">"Chain ID mismatch: transaction chain ID {tx_chain_id} does not match network chain ID {actual_chain_id}"
+<a href=#465 id=465 data-nosnippet>465</a>                <span class="string">"chainId does not match node's (have={tx_chain_id}, want={actual_chain_id})"
 <a href=#466 id=466 data-nosnippet>466</a>            </span>));
 <a href=#467 id=467 data-nosnippet>467</a>        }
 <a href=#468 id=468 data-nosnippet>468</a>        <span class="prelude-val">Ok</span>(())
