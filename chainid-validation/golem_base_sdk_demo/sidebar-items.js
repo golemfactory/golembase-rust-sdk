@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["log_num_of_entities_owned","main"]};

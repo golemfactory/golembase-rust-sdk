@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"fn":["deserialize_base64","serialize_base64"],"struct":["EntityMetaData","SearchResult"]};

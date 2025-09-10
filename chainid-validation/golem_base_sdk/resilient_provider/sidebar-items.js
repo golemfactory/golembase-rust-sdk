@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["RpcError"],"struct":["ResilientProvider","ResilientProviderConfig"]};
