@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["TransactionPool"]};
+window.SIDEBAR_ITEMS = {"struct":["TransactionPool","TransactionPoolState"]};
