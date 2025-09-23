@@ -653,15 +653,18 @@ impl GolemBaseRpcServer for GolemBaseMock {
             .transpose()?)
     }
 
-    async fn get_entity_metadata(&self, key: B256) -> RpcResult<Option<EntityMetaData>> {
+    async fn get_entity_metadata(&self, key: B256) -> RpcResult<EntityMetaData> {
         let _override = self.next_override("golem_getEntityMetadata")?;
-        return_override!(_override, Option<EntityMetaData>);
+        return_override!(_override, EntityMetaData);
 
         Ok(self
             .entity_db
             .get_entity(&key)
             .await
-            .map(|entity| EntityMetaData::from(&entity)))
+            .map(|entity| EntityMetaData::from(&entity))
+            .ok_or_else(|| {
+                create_error(ErrorCode::InvalidParams, format!("entity {key} not found"))
+            })?)
     }
 
     async fn get_entity_count(&self) -> RpcResult<u64> {

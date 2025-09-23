@@ -91,7 +91,7 @@ pub trait GolemBaseRpc {
     async fn get_entity(&self, key: B256) -> RpcResult<Option<Entity>>;
 
     #[method(name = "getEntityMetaData")]
-    async fn get_entity_metadata(&self, key: B256) -> RpcResult<Option<EntityMetaData>>;
+    async fn get_entity_metadata(&self, key: B256) -> RpcResult<EntityMetaData>;
 
     #[method(name = "getEntityCount")]
     async fn get_entity_count(&self) -> RpcResult<u64>;
