@@ -313,10 +313,11 @@ impl GolemBaseClient {
     /// Gets the entity keys of all entities owned by the given address.
     /// Returns a vector of entity keys for the specified owner.
     pub async fn get_entities_of_owner(&self, address: Address) -> Result<Vec<Hash>, Error> {
-        let result = self
-            .rpc_call::<&[Address], Option<Vec<Hash>>>("arkiv_getEntitiesOfOwner", &[address])
-            .await?;
-        Ok(result.unwrap_or_default())
+        let query = format!("$owner = {}", address);
+        let options = QueryOptions::empty().with_key();
+        self.query_with_options(&query, &options)
+            .await
+            .map(|results| results.into_iter().map(|result| result.key).collect())
     }
 
     /// Gets the storage value associated with the given entity key.
