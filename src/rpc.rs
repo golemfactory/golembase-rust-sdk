@@ -41,23 +41,6 @@ pub enum Error {
     UnexpectedError(String),
 }
 
-/// Type representing metadata for an entity.
-/// Contains information such as expiration, payload, annotations, and owner.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EntityMetaData {
-    /// The block number at which the entity expires.
-    pub expires_at_block: Option<u64>,
-    /// The payload associated with the entity.
-    pub payload: Option<String>,
-    /// String annotations for the entity.
-    pub string_annotations: Vec<StringAnnotation>,
-    /// Numeric annotations for the entity.
-    pub numeric_annotations: Vec<NumericAnnotation>,
-    /// The owner of the entity.
-    pub owner: Address,
-}
-
 /// Represents a single search result from a query.
 /// Contains the entity key, value (decoded from base64), expiration, owner, and annotations.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -320,25 +303,34 @@ impl GolemBaseClient {
             .map(|results| results.into_iter().map(|result| result.key).collect())
     }
 
-    /// Gets the storage value associated with the given entity key.
-    /// Decodes the value from base64 and attempts to convert it to the requested type.
-    pub async fn get_storage_value<T: TryFrom<Vec<u8>>>(&self, key: Hash) -> Result<T, Error>
-    where
-        <T as TryFrom<Vec<u8>>>::Error: std::fmt::Display,
-    {
+    /// Gets an entity by its key with all metadata.
+    /// Returns the first matching SearchResult or an error if not found.
+    async fn get_entity(&self, key: Hash) -> Result<SearchResult, Error> {
         let query = format!("$key = {}", key);
-        let options = QueryOptions::empty().with_payload();
+        let options = QueryOptions::with_all();
         let search = self.query_with_options(&query, &options).await?;
 
         if search.is_empty() {
-            return Err(Error::UnexpectedError("No search result found".to_string()));
+            return Err(Error::UnexpectedError(
+                "No entity found with the given key".to_string(),
+            ));
         }
 
         if search.len() > 1 {
             log::warn!("Multiple entities found for key {key}, returning the first one");
         }
 
-        let value = search[0]
+        Ok(search[0].clone())
+    }
+
+    /// Gets the storage value associated with the given entity key.
+    /// Decodes the value from base64 and attempts to convert it to the requested type.
+    pub async fn get_storage_value<T: TryFrom<Vec<u8>>>(&self, key: Hash) -> Result<T, Error>
+    where
+        <T as TryFrom<Vec<u8>>>::Error: std::fmt::Display,
+    {
+        let search_result = self.get_entity(key).await?;
+        let value = search_result
             .value
             .as_ref()
             .map(|value| value.to_vec())
@@ -383,16 +375,18 @@ impl GolemBaseClient {
         &self,
         block_number: u64,
     ) -> Result<Vec<Hash>, Error> {
-        let result = self
-            .rpc_call::<u64, Option<Vec<Hash>>>("arkiv_getEntitiesToExpireAtBlock", block_number)
-            .await?;
-        Ok(result.unwrap_or_default())
+        // Query entities that expire at the specified block number
+        let query = format!("$expiration = {}", block_number);
+        let options = QueryOptions::empty().with_key();
+
+        self.query_with_options(&query, &options)
+            .await
+            .map(|results| results.into_iter().map(|result| result.key).collect())
     }
 
-    /// Gets metadata for a specific entity.
-    /// Returns an `EntityMetaData` struct for the given entity key.
-    pub async fn get_entity_metadata(&self, key: Hash) -> Result<EntityMetaData, Error> {
-        self.rpc_call::<&[Hash], EntityMetaData>("arkiv_getEntityMetaData", &[key])
-            .await
+    /// Gets the metadata for a specific entity by its key.
+    /// Returns a `SearchResult` containing the entity's metadata including annotations, owner, and expiration.
+    pub async fn get_entity_metadata(&self, key: Hash) -> Result<SearchResult, Error> {
+        self.get_entity(key).await
     }
 }

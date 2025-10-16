@@ -1,10 +1,9 @@
 use alloy::primitives::{keccak256, Address, B256};
 use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use bytes::Bytes;
 use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
 use golem_base_sdk::rpc::QueryOptions;
-use golem_base_sdk::rpc::{serialize_base64, EntityMetaData, SearchResult};
+use golem_base_sdk::rpc::{serialize_base64, SearchResult};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::string::FromUtf8Error;
@@ -100,6 +99,14 @@ impl Entity {
                 // Compare the entity's owner with the specified address
                 self.owner == *value
             }
+            QueryCondition::KeyEquals(value) => {
+                // Compare the entity's key with the specified key
+                self.key == *value
+            }
+            QueryCondition::ExpirationEquals(value) => {
+                // Compare the entity's expires_at with the specified block number
+                self.expires_at == Some(*value)
+            }
         }
     }
 
@@ -131,18 +138,6 @@ impl Entity {
                 true => self.numeric_annotations.clone(),
                 false => Vec::new(),
             },
-        }
-    }
-}
-
-impl From<&Entity> for EntityMetaData {
-    fn from(entity: &Entity) -> Self {
-        Self {
-            expires_at_block: entity.expires_at,
-            payload: Some(BASE64.encode(&entity.data)),
-            string_annotations: entity.string_annotations.clone(),
-            numeric_annotations: entity.numeric_annotations.clone(),
-            owner: entity.owner,
         }
     }
 }
@@ -239,6 +234,26 @@ impl EntityDbState {
                     .get(value)
                     .cloned()
                     .unwrap_or_default()
+            }
+            QueryCondition::KeyEquals(value) => {
+                // Find entity by key
+                if self.entities.contains_key(value) {
+                    vec![*value]
+                } else {
+                    vec![]
+                }
+            }
+            QueryCondition::ExpirationEquals(value) => {
+                // Find entities that expire at the specified block number
+                self.entities
+                    .values()
+                    .filter_map(|entity| {
+                        entity
+                            .expires_at
+                            .filter(|&expires_at| expires_at == *value)
+                            .map(|_| entity.key)
+                    })
+                    .collect()
             }
         }
     }

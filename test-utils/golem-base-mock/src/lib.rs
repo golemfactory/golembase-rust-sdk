@@ -10,7 +10,7 @@ use alloy::rpc::types::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{EntityMetaData, QueryOptions, SearchResult};
+use golem_base_sdk::rpc::{QueryOptions, SearchResult};
 use jsonrpsee::core::{async_trait, RpcResult, StringError, SubscriptionResult};
 use jsonrpsee::types::{ErrorCode, ErrorObject};
 use jsonrpsee::{PendingSubscriptionSink, SubscriptionMessage};
@@ -651,20 +651,6 @@ impl GolemBaseRpcServer for GolemBaseMock {
                 })
             })
             .transpose()?)
-    }
-
-    async fn get_entity_metadata(&self, key: B256) -> RpcResult<EntityMetaData> {
-        let _override = self.next_override("golem_getEntityMetadata")?;
-        return_override!(_override, EntityMetaData);
-
-        Ok(self
-            .entity_db
-            .get_entity(&key)
-            .await
-            .map(|entity| EntityMetaData::from(&entity))
-            .ok_or_else(|| {
-                create_error(ErrorCode::InvalidParams, format!("entity {key} not found"))
-            })?)
     }
 
     async fn get_entity_count(&self) -> RpcResult<u64> {

@@ -49,7 +49,7 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
     assert_eq!(metadata.numeric_annotations[0].value, timestamp);
     assert_eq!(metadata.owner, account);
     // Entry should be created in start_block + 1.
-    assert_eq!(metadata.expires_at_block.unwrap(), start_block + 1000);
+    assert_eq!(metadata.expires_at, start_block + 1000);
     Ok(())
 }
 

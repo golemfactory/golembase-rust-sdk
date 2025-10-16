@@ -1,4 +1,4 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, B256};
 
 /// Represents different types of query conditions
 #[derive(Debug, Clone)]
@@ -6,6 +6,8 @@ pub enum QueryCondition {
     StringEquals(String, String), // key = "value"
     NumericEquals(String, u64),   // key = value
     OwnerEquals(Address),         // $owner = "value"
+    KeyEquals(B256),              // $key = "value"
+    ExpirationEquals(u64),        // $expiration = value
 }
 
 /// Represents a parsed query expression
@@ -28,7 +30,9 @@ enum Token {
     String(String),
     Number(u64),
     Ident(String),
-    Owner, // $owner
+    Owner,      // $owner
+    Key,        // $key
+    Expiration, // $expiration
 }
 
 /// Parser that consumes tokens incrementally
@@ -139,7 +143,15 @@ impl Parser {
                 self.advance();
                 "$owner".to_string()
             }
-            _ => return Err("Expected identifier or $owner".to_string()),
+            Some(Token::Key) => {
+                self.advance();
+                "$key".to_string()
+            }
+            Some(Token::Expiration) => {
+                self.advance();
+                "$expiration".to_string()
+            }
+            _ => return Err("Expected identifier, $owner, $key, or $expiration".to_string()),
         };
 
         self.match_token(Token::Eq)?;
@@ -156,6 +168,14 @@ impl Parser {
                         }
                         Err(_) => Err(format!("Invalid address format: {}", value)),
                     }
+                } else if key == "$key" {
+                    // Parse entity key from string value
+                    match value.parse::<B256>() {
+                        Ok(entity_key) => {
+                            Ok(Expression::Condition(QueryCondition::KeyEquals(entity_key)))
+                        }
+                        Err(_) => Err(format!("Invalid entity key format: {}", value)),
+                    }
                 } else {
                     Ok(Expression::Condition(QueryCondition::StringEquals(
                         key, value,
@@ -165,9 +185,15 @@ impl Parser {
             Some(Token::Number(value)) => {
                 let value = *value;
                 self.advance();
-                Ok(Expression::Condition(QueryCondition::NumericEquals(
-                    key, value,
-                )))
+                if key == "$expiration" {
+                    Ok(Expression::Condition(QueryCondition::ExpirationEquals(
+                        value,
+                    )))
+                } else {
+                    Ok(Expression::Condition(QueryCondition::NumericEquals(
+                        key, value,
+                    )))
+                }
             }
             _ => Err("Expected string or number value".to_string()),
         };
@@ -302,6 +328,10 @@ impl<'a> Tokenizer<'a> {
 
         if ident == "owner" {
             Ok(Token::Owner)
+        } else if ident == "key" {
+            Ok(Token::Key)
+        } else if ident == "expiration" {
+            Ok(Token::Expiration)
         } else {
             Err(format!("Unknown meta-annotation: ${}", ident))
         }
@@ -483,5 +513,26 @@ mod tests {
             Parser::parse_query("$owner = \"0x1234567890ABCDEF1234567890abcdef1234567890\"");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid address format"));
+    }
+
+    #[test]
+    fn test_parse_key_equality() {
+        let result = Parser::parse_query(
+            "$key = \"0x1234567890123456789012345678901234567890123456789012345678901234\"",
+        )
+        .unwrap();
+        assert!(matches!(
+            result,
+            Expression::Condition(QueryCondition::KeyEquals(_))
+        ));
+    }
+
+    #[test]
+    fn test_parse_expiration_equality() {
+        let result = Parser::parse_query("$expiration = 12345").unwrap();
+        assert!(matches!(
+            result,
+            Expression::Condition(QueryCondition::ExpirationEquals(12345))
+        ));
     }
 }

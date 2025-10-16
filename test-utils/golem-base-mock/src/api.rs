@@ -3,7 +3,7 @@ use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Transaction, TransactionReceipt, TransactionRequest,
 };
 use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{EntityMetaData, QueryOptions, SearchResult};
+use golem_base_sdk::rpc::{QueryOptions, SearchResult};
 use jsonrpsee::core::{RpcResult, SubscriptionResult};
 use jsonrpsee::proc_macros::rpc;
 
@@ -89,9 +89,6 @@ pub trait EthRpc {
 pub trait GolemBaseRpc {
     #[method(name = "getEntity")]
     async fn get_entity(&self, key: B256) -> RpcResult<Option<Entity>>;
-
-    #[method(name = "getEntityMetaData")]
-    async fn get_entity_metadata(&self, key: B256) -> RpcResult<EntityMetaData>;
 
     #[method(name = "getEntityCount")]
     async fn get_entity_count(&self) -> RpcResult<u64>;
