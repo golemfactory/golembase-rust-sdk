@@ -10,7 +10,7 @@ use alloy::rpc::types::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{EntityMetaData, SearchResult};
+use golem_base_sdk::rpc::{EntityMetaData, QueryOptions, SearchResult};
 use jsonrpsee::core::{async_trait, RpcResult, StringError, SubscriptionResult};
 use jsonrpsee::types::{ErrorCode, ErrorObject};
 use jsonrpsee::{PendingSubscriptionSink, SubscriptionMessage};
@@ -701,7 +701,11 @@ impl GolemBaseRpcServer for GolemBaseMock {
         }
     }
 
-    async fn query_entities(&self, query: String) -> RpcResult<Vec<SearchResult>> {
+    async fn query_entities(
+        &self,
+        query: String,
+        options: QueryOptions,
+    ) -> RpcResult<Vec<SearchResult>> {
         let _override = self.next_override("golem_queryEntities")?;
         return_override!(_override, Vec<SearchResult>);
         let entities = self.entity_db.query_entities(&query).await.map_err(|e| {
@@ -713,10 +717,7 @@ impl GolemBaseRpcServer for GolemBaseMock {
 
         let results: Vec<SearchResult> = entities
             .into_iter()
-            .map(|entity| SearchResult {
-                key: entity.key,
-                value: entity.data,
-            })
+            .map(|entity| entity.to_search_result(&options))
             .collect();
         Ok(results)
     }

@@ -3,7 +3,7 @@ use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Transaction, TransactionReceipt, TransactionRequest,
 };
 use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{EntityMetaData, SearchResult};
+use golem_base_sdk::rpc::{EntityMetaData, QueryOptions, SearchResult};
 use jsonrpsee::core::{RpcResult, SubscriptionResult};
 use jsonrpsee::proc_macros::rpc;
 
@@ -106,7 +106,11 @@ pub trait GolemBaseRpc {
     async fn get_storage_value(&self, keys: B256) -> RpcResult<String>;
 
     #[method(name = "queryEntities")]
-    async fn query_entities(&self, query: String) -> RpcResult<Vec<SearchResult>>;
+    async fn query_entities(
+        &self,
+        query: String,
+        options: QueryOptions,
+    ) -> RpcResult<Vec<SearchResult>>;
 
     #[method(name = "getEntitiesToExpireAtBlock")]
     async fn get_entities_to_expire_at_block(

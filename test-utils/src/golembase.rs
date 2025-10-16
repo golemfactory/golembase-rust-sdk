@@ -184,7 +184,7 @@ impl GolemBaseContainer {
                 "--dev",
                 "--http",
                 "--http.api",
-                "eth,web3,net,debug,golembase",
+                "eth,web3,net,debug,golembas,arkiv",
                 "--verbosity",
                 "3",
                 "--http.addr",

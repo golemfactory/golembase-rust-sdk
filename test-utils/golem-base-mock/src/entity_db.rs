@@ -3,6 +3,7 @@ use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use bytes::Bytes;
 use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
+use golem_base_sdk::rpc::QueryOptions;
 use golem_base_sdk::rpc::{serialize_base64, EntityMetaData, SearchResult};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -101,6 +102,37 @@ impl Entity {
             }
         }
     }
+
+    pub fn to_search_result(&self, options: &QueryOptions) -> SearchResult {
+        let includes = |col: &str| options.columns.contains(&col.to_string());
+
+        SearchResult {
+            key: match includes("key") {
+                true => self.key,
+                false => Default::default(),
+            },
+            value: match includes("payload") {
+                true => Some(self.data.clone()),
+                false => None,
+            },
+            expires_at: match includes("expires_at") {
+                true => self.expires_at.unwrap_or(0),
+                false => 0,
+            },
+            owner: match includes("owner_address") {
+                true => self.owner,
+                false => Default::default(),
+            },
+            string_annotations: match options.include_annotations {
+                true => self.string_annotations.clone(),
+                false => Vec::new(),
+            },
+            numeric_annotations: match options.include_annotations {
+                true => self.numeric_annotations.clone(),
+                false => Vec::new(),
+            },
+        }
+    }
 }
 
 impl From<&Entity> for EntityMetaData {
@@ -132,7 +164,11 @@ impl From<&Entity> for SearchResult {
     fn from(entity: &Entity) -> Self {
         Self {
             key: entity.key,
-            value: entity.data.clone(),
+            value: Some(entity.data.clone()),
+            expires_at: entity.expires_at.unwrap_or(0),
+            owner: entity.owner,
+            string_annotations: entity.string_annotations.clone(),
+            numeric_annotations: entity.numeric_annotations.clone(),
         }
     }
 }
