@@ -39,9 +39,17 @@ pub struct SearchResult {
     pub expires_at: Option<u64>,
     #[serde(rename = "owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<Address>,
-    #[serde(rename = "stringAnnotations", skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "stringAnnotations",
+        skip_serializing_if = "Vec::is_empty",
+        default
+    )]
     pub string_annotations: Vec<StringAnnotation>,
-    #[serde(rename = "numericAnnotations", skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "numericAnnotations",
+        skip_serializing_if = "Vec::is_empty",
+        default
+    )]
     pub numeric_annotations: Vec<NumericAnnotation>,
 }
 
