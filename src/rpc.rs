@@ -13,20 +13,6 @@ use thiserror::Error;
 use crate::resilient_provider::RpcError;
 use crate::{GolemBaseClient, Hash, NumericAnnotation, StringAnnotation};
 
-/// Available columns for query results.
-pub const COLUMNS: &[&str] = &[
-    KEY_COLUMN,
-    PAYLOAD_COLUMN,
-    EXPIRES_AT_COLUMN,
-    OWNER_ADDRESS_COLUMN,
-];
-
-/// Column identifiers for query results.
-pub const KEY_COLUMN: &str = "key";
-pub const PAYLOAD_COLUMN: &str = "payload";
-pub const EXPIRES_AT_COLUMN: &str = "expires_at";
-pub const OWNER_ADDRESS_COLUMN: &str = "owner_address";
-
 /// Represents errors that can occur in the GolemBase RPC module.
 /// Used to wrap and describe errors from RPC requests, decoding, or deserialization.
 #[derive(Debug, Display, Error)]
@@ -47,55 +33,122 @@ pub enum Error {
 pub struct SearchResult {
     #[serde(rename = "key")]
     pub key: Hash,
-    #[serde(
-        rename = "value",
-        deserialize_with = "deserialize_optional_base64",
-        serialize_with = "serialize_optional_base64"
-    )]
+    #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
     pub value: Option<Bytes>,
-    #[serde(rename = "expires_at")]
-    pub expires_at: u64,
-    #[serde(rename = "owner")]
-    pub owner: Address,
-    #[serde(rename = "string_annotations")]
+    #[serde(rename = "expiresAt", skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<u64>,
+    #[serde(rename = "owner", skip_serializing_if = "Option::is_none")]
+    pub owner: Option<Address>,
+    #[serde(rename = "stringAnnotations", skip_serializing_if = "Vec::is_empty")]
     pub string_annotations: Vec<StringAnnotation>,
-    #[serde(rename = "numeric_annotations")]
+    #[serde(rename = "numericAnnotations", skip_serializing_if = "Vec::is_empty")]
     pub numeric_annotations: Vec<NumericAnnotation>,
 }
 
+/// Controls what data to include in query results.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct IncludeData {
+    /// Include the key field
+    #[serde(rename = "key")]
+    pub key: bool,
+    /// Include annotations (string and numeric)
+    #[serde(rename = "annotations")]
+    pub annotations: bool,
+    /// Include the payload data
+    #[serde(rename = "payload")]
+    pub payload: bool,
+    /// Include expiration information
+    #[serde(rename = "expiration")]
+    pub expiration: bool,
+    /// Include owner information
+    #[serde(rename = "owner")]
+    pub owner: bool,
+}
+
+/// Response structure for query operations.
+/// Wraps the search results with metadata including block number and pagination cursor.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QueryResponse {
+    #[serde(rename = "data")]
+    pub data: Vec<SearchResult>,
+    #[serde(rename = "blockNumber")]
+    pub block_number: u64,
+    #[serde(rename = "cursor", skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
+}
+
 /// Options for querying entities in GolemBase.
-/// Controls which columns to return, whether to include annotations, and at which block to query.
+/// Controls pagination, data inclusion, and block number for queries.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryOptions {
     /// The block number at which to query entities.
-    #[serde(rename = "at_block")]
+    #[serde(rename = "atBlock", skip_serializing_if = "Option::is_none")]
     pub at_block: Option<u64>,
-    /// Whether to include annotations in the query results.
-    #[serde(rename = "include_annotations")]
-    pub include_annotations: bool,
-    /// The columns to include in the query results.
-    #[serde(rename = "columns")]
-    pub columns: Vec<String>,
+    /// Controls what data to include in the results.
+    #[serde(rename = "includeData", skip_serializing_if = "Option::is_none")]
+    pub include_data: Option<IncludeData>,
+    /// Maximum number of results per page.
+    #[serde(rename = "resultsPerPage")]
+    pub results_per_page: u64,
+    /// Cursor for pagination (opaque string).
+    #[serde(rename = "cursor", skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
 }
 
 impl Default for QueryOptions {
     fn default() -> Self {
-        Self::empty()
+        Self::new()
+    }
+}
+
+impl IncludeData {
+    /// Creates an `IncludeData` with all fields enabled.
+    pub fn all() -> Self {
+        Self {
+            key: true,
+            annotations: true,
+            payload: true,
+            expiration: true,
+            owner: true,
+        }
+    }
+
+    /// Creates an `IncludeData` with only keys enabled.
+    pub fn keys_only() -> Self {
+        Self {
+            key: true,
+            annotations: false,
+            payload: false,
+            expiration: false,
+            owner: false,
+        }
+    }
+
+    /// Creates an `IncludeData` with metadata only (no payload).
+    pub fn metadata_only() -> Self {
+        Self {
+            key: true,
+            annotations: true,
+            payload: false,
+            expiration: true,
+            owner: true,
+        }
     }
 }
 
 impl QueryOptions {
     /// Creates a new `QueryOptions` with default settings.
     pub fn new() -> Self {
-        Self::default()
+        Self::empty()
     }
 
     /// Creates an empty `QueryOptions` with no columns selected.
     fn empty() -> Self {
         Self {
             at_block: None,
-            include_annotations: false,
-            columns: Vec::new(),
+            include_data: Some(IncludeData::keys_only()),
+            results_per_page: 100,
+            cursor: None,
         }
     }
 
@@ -103,8 +156,9 @@ impl QueryOptions {
     pub fn with_all() -> Self {
         Self {
             at_block: None,
-            include_annotations: true,
-            columns: COLUMNS.iter().map(|s| s.to_string()).collect(),
+            include_data: Some(IncludeData::all()),
+            results_per_page: 100,
+            cursor: None,
         }
     }
 
@@ -116,69 +170,73 @@ impl QueryOptions {
 
     /// Sets whether to include annotations in query results.
     pub fn with_annotations(mut self, include_annotations: bool) -> Self {
-        self.include_annotations = include_annotations;
-        self
-    }
-
-    /// Sets the columns to include in query results.
-    pub fn with_columns(mut self, columns: Vec<String>) -> Self {
-        self.columns = columns;
+        if let Some(ref mut data) = self.include_data {
+            data.annotations = include_annotations;
+        }
         self
     }
 
     /// Includes the key column in query results.
     pub fn with_key(mut self) -> Self {
-        if !self.columns.contains(&KEY_COLUMN.to_string()) {
-            self.columns.push(KEY_COLUMN.to_string());
+        if let Some(ref mut data) = self.include_data {
+            data.key = true;
         }
         self
     }
 
     /// Includes the payload column in query results.
     pub fn with_payload(mut self) -> Self {
-        if !self.columns.contains(&PAYLOAD_COLUMN.to_string()) {
-            self.columns.push(PAYLOAD_COLUMN.to_string());
+        if let Some(ref mut data) = self.include_data {
+            data.payload = true;
         }
         self
     }
 
     /// Includes the expires_at column in query results.
     pub fn with_expires_at(mut self) -> Self {
-        if !self.columns.contains(&EXPIRES_AT_COLUMN.to_string()) {
-            self.columns.push(EXPIRES_AT_COLUMN.to_string());
+        if let Some(ref mut data) = self.include_data {
+            data.expiration = true;
         }
         self
     }
 
     /// Includes the owner_address column in query results.
     pub fn with_owner_address(mut self) -> Self {
-        if !self.columns.contains(&OWNER_ADDRESS_COLUMN.to_string()) {
-            self.columns.push(OWNER_ADDRESS_COLUMN.to_string());
+        if let Some(ref mut data) = self.include_data {
+            data.owner = true;
         }
         self
     }
 
     /// Excludes the key column from query results.
     pub fn exclude_key(mut self) -> Self {
-        self.columns.retain(|col| col != KEY_COLUMN);
+        if let Some(ref mut data) = self.include_data {
+            data.key = false;
+        }
         self
     }
 
     /// Excludes the payload column from query results.
     pub fn exclude_payload(mut self) -> Self {
-        self.columns.retain(|col| col != PAYLOAD_COLUMN);
+        if let Some(ref mut data) = self.include_data {
+            data.payload = false;
+        }
         self
     }
 
     /// Excludes the expires_at column from query results.
     pub fn exclude_expires_at(mut self) -> Self {
-        self.columns.retain(|col| col != EXPIRES_AT_COLUMN);
+        if let Some(ref mut data) = self.include_data {
+            data.expiration = false;
+        }
         self
     }
 
     /// Excludes the owner_address column from query results.
     pub fn exclude_owner_address(mut self) -> Self {
-        self.columns.retain(|col| col != OWNER_ADDRESS_COLUMN);
+        if let Some(ref mut data) = self.include_data {
+            data.owner = false;
+        }
         self
     }
 }
@@ -345,13 +403,10 @@ impl GolemBaseClient {
         query: &str,
         options: &QueryOptions,
     ) -> Result<Vec<SearchResult>, Error> {
-        let results = self
-            .rpc_call::<(&str, &QueryOptions), Vec<SearchResult>>(
-                "arkiv_queryEntities",
-                (&query, options),
-            )
+        let response = self
+            .rpc_call::<(&str, &QueryOptions), QueryResponse>("arkiv_query", (&query, options))
             .await?;
-        Ok(results)
+        Ok(response.data)
     }
 
     /// Queries entities in GolemBase based on annotations.

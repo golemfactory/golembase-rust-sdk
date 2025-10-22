@@ -102,7 +102,7 @@ pub trait GolemBaseRpc {
     #[method(name = "getStorageValue")]
     async fn get_storage_value(&self, keys: B256) -> RpcResult<String>;
 
-    #[method(name = "queryEntities")]
+    #[method(name = "arkiv_query")]
     async fn query_entities(
         &self,
         query: String,

@@ -2,8 +2,8 @@ use alloy::primitives::{keccak256, Address, B256};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
-use golem_base_sdk::rpc::QueryOptions;
 use golem_base_sdk::rpc::{serialize_base64, SearchResult};
+use golem_base_sdk::rpc::{IncludeData, QueryOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::string::FromUtf8Error;
@@ -111,30 +111,30 @@ impl Entity {
     }
 
     pub fn to_search_result(&self, options: &QueryOptions) -> SearchResult {
-        let includes = |col: &str| options.columns.contains(&col.to_string());
+        let include_data = options.clone().include_data.unwrap_or(IncludeData::all());
 
         SearchResult {
-            key: match includes("key") {
+            key: match include_data.key {
                 true => self.key,
                 false => Default::default(),
             },
-            value: match includes("payload") {
+            value: match include_data.payload {
                 true => Some(self.data.clone()),
                 false => None,
             },
-            expires_at: match includes("expires_at") {
-                true => self.expires_at.unwrap_or(0),
-                false => 0,
+            expires_at: match include_data.expiration {
+                true => self.expires_at,
+                false => None,
             },
-            owner: match includes("owner_address") {
-                true => self.owner,
-                false => Default::default(),
+            owner: match include_data.owner {
+                true => Some(self.owner),
+                false => None,
             },
-            string_annotations: match options.include_annotations {
+            string_annotations: match include_data.annotations {
                 true => self.string_annotations.clone(),
                 false => Vec::new(),
             },
-            numeric_annotations: match options.include_annotations {
+            numeric_annotations: match include_data.annotations {
                 true => self.numeric_annotations.clone(),
                 false => Vec::new(),
             },
@@ -160,8 +160,8 @@ impl From<&Entity> for SearchResult {
         Self {
             key: entity.key,
             value: Some(entity.data.clone()),
-            expires_at: entity.expires_at.unwrap_or(0),
-            owner: entity.owner,
+            expires_at: Some(entity.expires_at.unwrap_or(0)),
+            owner: Some(entity.owner),
             string_annotations: entity.string_annotations.clone(),
             numeric_annotations: entity.numeric_annotations.clone(),
         }

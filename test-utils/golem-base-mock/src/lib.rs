@@ -692,7 +692,7 @@ impl GolemBaseRpcServer for GolemBaseMock {
         query: String,
         options: QueryOptions,
     ) -> RpcResult<Vec<SearchResult>> {
-        let _override = self.next_override("golem_queryEntities")?;
+        let _override = self.next_override("arkiv_query")?;
         return_override!(_override, Vec<SearchResult>);
         let entities = self.entity_db.query_entities(&query).await.map_err(|e| {
             create_error(
@@ -705,6 +705,7 @@ impl GolemBaseRpcServer for GolemBaseMock {
             .into_iter()
             .map(|entity| entity.to_search_result(&options))
             .collect();
+
         Ok(results)
     }
 
