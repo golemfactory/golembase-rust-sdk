@@ -63,7 +63,10 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     );
     assert_eq!(test_type_results.len(), 1);
     assert_eq!(test_type_results[0].key, result);
-    assert_eq!(test_type_results[0].value, test_data.as_slice());
+    assert_eq!(
+        test_type_results[0].value.clone().unwrap(),
+        test_data.as_slice()
+    );
 
     log::info!("Querying entities by numeric annotation 'test_timestamp = 1234567890'...");
     let timestamp_results = client
@@ -88,7 +91,7 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     log::info!("Getting entity metadata...");
     let metadata = client.get_entity_metadata(result).await.unwrap();
     log::info!("Entity metadata: {:?}", metadata);
-    assert_eq!(metadata.owner, account);
+    assert_eq!(metadata.owner.unwrap(), account);
     assert_eq!(metadata.string_annotations.len(), 1);
     assert_eq!(metadata.numeric_annotations.len(), 1);
 

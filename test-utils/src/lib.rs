@@ -7,6 +7,7 @@ use std::env;
 use golem_base_sdk::client::GolemBaseClient;
 use golem_base_sdk::entity::Hash;
 
+pub mod entity_set;
 pub mod golembase;
 
 /// Default URL for GolemBase node in tests

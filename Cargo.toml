@@ -16,7 +16,6 @@ alloy-rlp = "0.3"
 alloy-signer-local = { version = "0.15", features = ["keystore"] }
 anyhow = "1.0"
 async-trait = "0.1"
-base64 = "0.22"
 bigdecimal = "0.4"
 bon = "3.6"
 bytes = "1.0"

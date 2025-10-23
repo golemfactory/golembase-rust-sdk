@@ -21,7 +21,7 @@ async fn test_event_listening() -> Result<()> {
     let container = GolemBaseContainer::new(Config::default()).await?;
     let client = GolemBaseClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
-    cleanup_entities(&client, account).await?;
+    cleanup_entities(&client, account).await.unwrap();
 
     // Start listening for events, before we create the entity to avoid missing the event.
     let events = client.events_client().await.unwrap();

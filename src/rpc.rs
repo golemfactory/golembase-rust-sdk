@@ -1,8 +1,7 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, U160};
 use alloy::rpc::json_rpc::{RpcRecv, RpcSend};
 use alloy_json_rpc::RpcError as AlloyError;
 use anyhow::anyhow;
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use bytes::Bytes;
 use displaydoc::Display;
 use serde::{Deserialize, Serialize};
@@ -19,8 +18,8 @@ use crate::{GolemBaseClient, Hash, NumericAnnotation, StringAnnotation};
 pub enum Error {
     /// Failed to send the RPC request: {0}
     RpcRequestError(String),
-    /// Failed to decode the base64-encoded storage value: {0}
-    Base64DecodeError(String),
+    /// Failed to decode the hex-encoded storage value: {0}
+    HexDecodeError(String),
     /// Failed to deserialize the RPC response: {0}
     ResponseDeserializationError(String),
     /// Unexpected error occurred: {0}
@@ -28,12 +27,18 @@ pub enum Error {
 }
 
 /// Represents a single search result from a query.
-/// Contains the entity key, value (decoded from base64), expiration, owner, and annotations.
+/// Contains the entity key, value (decoded from hex), expiration, owner, and annotations.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     #[serde(rename = "key")]
     pub key: Hash,
-    #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "value",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_hex",
+        serialize_with = "serialize_optional_hex",
+        default
+    )]
     pub value: Option<Bytes>,
     #[serde(rename = "expiresAt", skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<u64>,
@@ -249,53 +254,61 @@ impl QueryOptions {
     }
 }
 
-/// Helper function to decode a base64 string into Bytes
-fn decode_base64_string<'de, D>(s: &str) -> Result<Bytes, D::Error>
+/// Helper function to decode a hex string into Bytes
+/// Handles both prefixed (0x...) and non-prefixed hex strings
+fn decode_hex_string<'de, D>(s: &str) -> Result<Bytes, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    BASE64
-        .decode(s)
+    let hex_str = if s.starts_with("0x") { &s[2..] } else { s };
+    hex::decode(hex_str)
         .map(Bytes::from)
         .map_err(serde::de::Error::custom)
 }
 
-/// Helper for deserializing base64-encoded storage values.
+/// Helper for deserializing hex-encoded storage values.
+/// Handles both prefixed (0x...) and non-prefixed hex strings.
 /// Used to decode entity values returned from the RPC API.
-pub fn deserialize_base64<'de, D>(deserializer: D) -> Result<Bytes, D::Error>
+pub fn deserialize_hex<'de, D>(deserializer: D) -> Result<Bytes, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    decode_base64_string::<D>(&s)
+    decode_hex_string::<D>(&s)
 }
 
-/// Serialize Bytes as base64 string
-pub fn serialize_base64<S>(value: &Bytes, serializer: S) -> Result<S::Ok, S::Error>
+/// Encode bytes as hex string with 0x prefix
+pub fn encode_prefixed_hex(bytes: &[u8]) -> String {
+    format!("0x{}", hex::encode(bytes))
+}
+
+/// Serialize Bytes as hex string with 0x prefix
+pub fn serialize_hex<S>(value: &Bytes, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    serializer.serialize_str(&BASE64.encode(value))
+    serializer.serialize_str(&encode_prefixed_hex(value))
 }
 
-/// Helper for deserializing optional base64-encoded storage values.
+/// Helper for deserializing optional hex-encoded storage values.
+/// Handles both prefixed (0x...) and non-prefixed hex strings.
 /// Used to decode optional entity values returned from the RPC API.
-pub fn deserialize_optional_base64<'de, D>(deserializer: D) -> Result<Option<Bytes>, D::Error>
+pub fn deserialize_optional_hex<'de, D>(deserializer: D) -> Result<Option<Bytes>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     Option::<String>::deserialize(deserializer)?
-        .map(|str| decode_base64_string::<D>(&str))
+        .map(|str| decode_hex_string::<D>(&str))
         .transpose()
 }
 
-/// Serialize optional Bytes as base64 string
-pub fn serialize_optional_base64<S>(value: &Option<Bytes>, serializer: S) -> Result<S::Ok, S::Error>
+/// Serialize optional Bytes as hex string with 0x prefix
+pub fn serialize_optional_hex<S>(value: &Option<Bytes>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     match value {
-        Some(bytes) => serialize_base64(bytes, serializer),
+        Some(bytes) => serialize_hex(bytes, serializer),
         None => serializer.serialize_none(),
     }
 }
@@ -353,10 +366,13 @@ impl GolemBaseClient {
     /// Gets the entity keys of all entities in GolemBase.
     /// Returns a vector of all entity keys.
     pub async fn get_all_entity_keys(&self) -> Result<Vec<Hash>, Error> {
-        let result = self
-            .rpc_call::<(), Option<Vec<Hash>>>("arkiv_getAllEntityKeys", ())
-            .await?;
-        Ok(result.unwrap_or_default())
+        // This is workaround to get all entity keys, because there is no RPC call for this.
+        // Owner should never be 0x0, so it will return all entities.
+        let query = format!("!($owner=0x0000000000000000000000000000000000000000)");
+        let options = QueryOptions::empty().with_key();
+        self.query_with_options(&query, &options)
+            .await
+            .map(|results| results.into_iter().map(|result| result.key).collect())
     }
 
     /// Gets the entity keys of all entities owned by the given address.
@@ -390,7 +406,7 @@ impl GolemBaseClient {
     }
 
     /// Gets the storage value associated with the given entity key.
-    /// Decodes the value from base64 and attempts to convert it to the requested type.
+    /// Decodes the value from hex and attempts to convert it to the requested type.
     pub async fn get_storage_value<T: TryFrom<Vec<u8>>>(&self, key: Hash) -> Result<T, Error>
     where
         <T as TryFrom<Vec<u8>>>::Error: std::fmt::Display,
@@ -414,7 +430,23 @@ impl GolemBaseClient {
         let response = self
             .rpc_call::<(&str, &QueryOptions), QueryResponse>("arkiv_query", (&query, options))
             .await?;
-        Ok(response.data)
+
+        // Arkiv returns owner as 0x0 as a default value, when we didn't ask for address.
+        // We need to replace it with proper None to not mislead users.
+        Ok(response
+            .data
+            .into_iter()
+            .map(|result| SearchResult {
+                owner: result
+                    .owner
+                    .map(|owner| match owner {
+                        addr if addr == Address::from(U160::ZERO) => None,
+                        _ => Some(owner),
+                    })
+                    .flatten(),
+                ..result
+            })
+            .collect())
     }
 
     /// Queries entities in GolemBase based on annotations.

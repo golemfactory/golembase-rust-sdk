@@ -47,9 +47,9 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
 
     assert_eq!(metadata.string_annotations[0].value, "Test");
     assert_eq!(metadata.numeric_annotations[0].value, timestamp);
-    assert_eq!(metadata.owner, account);
+    assert_eq!(metadata.owner.unwrap(), account);
     // Entry should be created in start_block + 1.
-    assert_eq!(metadata.expires_at, start_block + 1000);
+    assert_eq!(metadata.expires_at.unwrap(), start_block + 1000);
     Ok(())
 }
 
@@ -117,7 +117,11 @@ async fn test_entity_operations() -> Result<()> {
         "Second entity 0x{entry2_id:x} should be removed. Instead got metadata: {:?}",
         result.unwrap()
     );
-    assert!(result.unwrap_err().to_string().contains("not found"));
+    let error = result.unwrap_err();
+    assert!(
+        error.to_string().contains("No entity found"),
+        "Incorrect error message: {error}"
+    );
 
     // Verify first entity still exists
     let final_str = client.cat(entry1_id).await?;

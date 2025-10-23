@@ -2,7 +2,7 @@ use alloy::primitives::{keccak256, Address, B256};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
-use golem_base_sdk::rpc::{serialize_base64, SearchResult};
+use golem_base_sdk::rpc::{serialize_hex, SearchResult};
 use golem_base_sdk::rpc::{IncludeData, QueryOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -17,7 +17,7 @@ use crate::query_parser::{Expression, Parser, QueryCondition};
 pub struct Entity {
     #[serde(serialize_with = "serialize_b256")]
     pub key: B256,
-    #[serde(serialize_with = "serialize_base64")]
+    #[serde(serialize_with = "serialize_hex")]
     pub data: Bytes,
     pub btl: u64,
     #[serde(serialize_with = "serialize_address")]

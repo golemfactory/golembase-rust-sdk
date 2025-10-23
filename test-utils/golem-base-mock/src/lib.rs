@@ -8,9 +8,8 @@ use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Log, Transaction, TransactionReceipt,
     TransactionRequest,
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{QueryOptions, SearchResult};
+use golem_base_sdk::rpc::{encode_prefixed_hex, QueryOptions, SearchResult};
 use jsonrpsee::core::{async_trait, RpcResult, StringError, SubscriptionResult};
 use jsonrpsee::types::{ErrorCode, ErrorObject};
 use jsonrpsee::{PendingSubscriptionSink, SubscriptionMessage};
@@ -677,7 +676,7 @@ impl GolemBaseRpcServer for GolemBaseMock {
         let _override = self.next_override("golem_getStorageValue")?;
         return_override!(_override, String);
         if let Some(entity) = self.entity_db.get_entity(&key).await {
-            let encoded = BASE64.encode(&entity.data);
+            let encoded = encode_prefixed_hex(&entity.data);
             Ok(encoded)
         } else {
             Err(create_error(

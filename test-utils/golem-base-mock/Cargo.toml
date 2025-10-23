@@ -8,7 +8,6 @@ alloy = { version = "0.15", features = ["full", "json-rpc"] }
 alloy-json-rpc = "0.15"
 anyhow = "1.0"
 async-trait = "0.1"
-base64 = "0.21"
 bytes = "1.0"
 derive_more = { version = "2.0", features = ["full"] }
 hex = "0.4"
