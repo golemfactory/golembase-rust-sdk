@@ -445,3 +445,82 @@ async fn test_get_entities_to_expire_at_block() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+#[serial]
+async fn test_query_entities_with_empty_annotations() -> Result<()> {
+    init_logger(false);
+
+    let container = GolemBaseContainer::new(Config::default()).await?;
+    let client = GolemBaseClient::new(container.get_url()?)?;
+    let account = create_test_account(&client).await?;
+
+    // Create entities with no annotations
+    let create_no_annotations = Create::new(b"no_annotations_data".to_vec(), 1000);
+    let entity_without_annotations = client.create_entry(account, create_no_annotations).await?;
+
+    // Create entity with only string annotations
+    let create_string_only =
+        Create::new(b"string_only_data".to_vec(), 1000).annotate_string("type", "string_only");
+    let entity_with_string_only = client.create_entry(account, create_string_only).await?;
+
+    // Create entity with only numeric annotations
+    let create_numeric_only =
+        Create::new(b"numeric_only_data".to_vec(), 1000).annotate_number("count", 5);
+    let entity_with_numeric_only = client.create_entry(account, create_numeric_only).await?;
+
+    // Create entity with both types of annotations
+    let create_both = Create::new(b"both_annotations_data".to_vec(), 1000)
+        .annotate_string("type", "both")
+        .annotate_number("value", 10);
+    let entity_with_both = client.create_entry(account, create_both).await?;
+
+    // Test getting entity with no annotations by key
+    let entity_no_annotations = client
+        .get_entity_metadata(entity_without_annotations)
+        .await?;
+
+    // Verify that empty annotations lists are properly deserialized
+    assert!(
+        entity_no_annotations.string_annotations.is_empty(),
+        "String annotations should be empty"
+    );
+    assert!(
+        entity_no_annotations.numeric_annotations.is_empty(),
+        "Numeric annotations should be empty"
+    );
+
+    // Verify other fields are present
+    assert!(
+        entity_no_annotations.value.is_some(),
+        "Entity value should be present"
+    );
+    assert_eq!(
+        entity_no_annotations.value.as_ref().unwrap().as_ref(),
+        b"no_annotations_data"
+    );
+    assert!(
+        entity_no_annotations.expires_at.is_some(),
+        "Expiration should be present"
+    );
+    assert!(
+        entity_no_annotations.owner.is_some(),
+        "Owner should be present"
+    );
+    assert_eq!(entity_no_annotations.owner.unwrap(), account);
+
+    // Test getting entities with specific annotations to ensure they don't interfere
+    let entity_string_only = client.get_entity_metadata(entity_with_string_only).await?;
+    assert!(!entity_string_only.string_annotations.is_empty());
+    assert!(entity_string_only.numeric_annotations.is_empty());
+
+    let entity_numeric_only = client.get_entity_metadata(entity_with_numeric_only).await?;
+    assert!(entity_numeric_only.string_annotations.is_empty());
+    assert!(!entity_numeric_only.numeric_annotations.is_empty());
+
+    let entity_both = client.get_entity_metadata(entity_with_both).await?;
+    assert!(!entity_both.string_annotations.is_empty());
+    assert!(!entity_both.numeric_annotations.is_empty());
+
+    Ok(())
+}
