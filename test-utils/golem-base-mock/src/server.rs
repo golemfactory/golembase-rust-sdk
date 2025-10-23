@@ -3,7 +3,7 @@ use jsonrpsee::server::{RpcModule, ServerBuilder};
 use std::net::SocketAddr;
 use url::Url;
 
-use crate::api::{EthRpcServer, GolemBaseRpcServer};
+use crate::api::{ArkivRpcServer, EthRpcServer};
 use crate::controller::MockController;
 use crate::transaction_pool::TransactionPool;
 use crate::GolemBaseMock;
@@ -60,7 +60,7 @@ impl GolemBaseMockServer {
         // Register RPC methods (both Ethereum and GolemBase)
         let rpc_impl = self.state.clone();
         module.merge(EthRpcServer::into_rpc(rpc_impl.clone()))?;
-        module.merge(GolemBaseRpcServer::into_rpc(rpc_impl))?;
+        module.merge(ArkivRpcServer::into_rpc(rpc_impl))?;
 
         let server = ServerBuilder::default().build(addr).await?;
 

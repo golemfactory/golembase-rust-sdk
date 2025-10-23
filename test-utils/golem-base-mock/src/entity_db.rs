@@ -88,12 +88,54 @@ impl Entity {
                     .find(|a| a.key == *key)
                     .map_or(false, |a| a.value == *value)
             }
+            QueryCondition::StringNotEquals(key, value) => {
+                // Check if the entity has this string annotation key with a different value
+                self.string_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(true, |a| a.value != *value)
+            }
             QueryCondition::NumericEquals(key, value) => {
                 // Check if the entity has this numeric annotation key with the specified value
                 self.numeric_annotations
                     .iter()
                     .find(|a| a.key == *key)
                     .map_or(false, |a| a.value == *value)
+            }
+            QueryCondition::NumericNotEquals(key, value) => {
+                // Check if the entity has this numeric annotation key with a different value
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(true, |a| a.value != *value)
+            }
+            QueryCondition::NumericLessThan(key, value) => {
+                // Check if the entity has this numeric annotation key with a value less than specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value < *value)
+            }
+            QueryCondition::NumericGreaterThan(key, value) => {
+                // Check if the entity has this numeric annotation key with a value greater than specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value > *value)
+            }
+            QueryCondition::NumericLessThanOrEqual(key, value) => {
+                // Check if the entity has this numeric annotation key with a value less than or equal to specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value <= *value)
+            }
+            QueryCondition::NumericGreaterThanOrEqual(key, value) => {
+                // Check if the entity has this numeric annotation key with a value greater than or equal to specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value >= *value)
             }
             QueryCondition::OwnerEquals(value) => {
                 // Compare the entity's owner with the specified address
@@ -208,20 +250,34 @@ impl EntityDbState {
                     self.evaluate_expression(right).into_iter().collect();
                 left_keys.union(&right_keys).cloned().collect()
             }
+            Expression::Not(expr) => {
+                // Get all entity keys
+                let all_keys: HashSet<B256> = self.entities.keys().cloned().collect();
+                // Get keys that match the negated expression
+                let matching_keys: HashSet<B256> =
+                    self.evaluate_expression(expr).into_iter().collect();
+                // Return keys that are NOT in the matching set
+                all_keys.difference(&matching_keys).cloned().collect()
+            }
         }
     }
 
     /// Get candidate entity keys from annotation maps for a given condition
     fn get_candidates(&self, condition: &QueryCondition) -> Vec<B256> {
         match condition {
-            QueryCondition::StringEquals(key, _) => {
+            QueryCondition::StringEquals(key, _) | QueryCondition::StringNotEquals(key, _) => {
                 // Find entities that have this string annotation key
                 self.string_annotations
                     .get(key)
                     .cloned()
                     .unwrap_or_default()
             }
-            QueryCondition::NumericEquals(key, _) => {
+            QueryCondition::NumericEquals(key, _)
+            | QueryCondition::NumericNotEquals(key, _)
+            | QueryCondition::NumericLessThan(key, _)
+            | QueryCondition::NumericGreaterThan(key, _)
+            | QueryCondition::NumericLessThanOrEqual(key, _)
+            | QueryCondition::NumericGreaterThanOrEqual(key, _) => {
                 // Find entities that have this numeric annotation key
                 self.numeric_annotations
                     .get(key)
@@ -265,6 +321,8 @@ impl EntityDbState {
         // Parse query string to extract conditions
         let expression =
             Parser::parse_query(query).map_err(|e| anyhow!("Failed to parse query: {}", e))?;
+
+        log::trace!("Parsed expression: {:?}", expression);
 
         // Evaluate the expression to get matching entity keys
         Ok(self.evaluate_expression(&expression))
