@@ -265,6 +265,53 @@ async fn test_query_entities() -> Result<()> {
     assert!(numeric_results.iter().any(|r| r.key == entity_ids[0]));
     assert!(numeric_results.iter().any(|r| r.key == entity_ids[3]));
 
+    // Test numeric inequality operators
+    // Test != operator
+    let not_equal_results = client.query_entities("priority != 1").await?;
+    assert_eq!(not_equal_results.len(), 2);
+    assert!(not_equal_results.iter().any(|r| r.key == entity_ids[1])); // priority = 2
+    assert!(not_equal_results.iter().any(|r| r.key == entity_ids[2])); // priority = 3
+
+    // Test < operator
+    let less_than_results = client.query_entities("priority < 2").await?;
+    assert_eq!(less_than_results.len(), 2);
+    assert!(less_than_results.iter().any(|r| r.key == entity_ids[0])); // priority = 1
+    assert!(less_than_results.iter().any(|r| r.key == entity_ids[3])); // priority = 1
+
+    // Test > operator
+    let greater_than_results = client.query_entities("priority > 2").await?;
+    assert_eq!(greater_than_results.len(), 1);
+    assert!(greater_than_results.iter().any(|r| r.key == entity_ids[2])); // priority = 3
+
+    // Test >= operator
+    let greater_equal_results = client.query_entities("priority >= 2").await?;
+    assert_eq!(greater_equal_results.len(), 2);
+    assert!(greater_equal_results.iter().any(|r| r.key == entity_ids[1])); // priority = 2
+    assert!(greater_equal_results.iter().any(|r| r.key == entity_ids[2])); // priority = 3
+
+    // Test <= operator
+    let less_equal_results = client.query_entities("priority <= 2").await?;
+    assert_eq!(less_equal_results.len(), 3);
+    assert!(less_equal_results.iter().any(|r| r.key == entity_ids[0])); // priority = 1
+    assert!(less_equal_results.iter().any(|r| r.key == entity_ids[1])); // priority = 2
+    assert!(less_equal_results.iter().any(|r| r.key == entity_ids[3])); // priority = 1
+
+    // Test mixed numeric queries combining different fields
+    let mixed_and_results = client
+        .query_entities("priority >= 2 && version <= 2")
+        .await?;
+    assert_eq!(mixed_and_results.len(), 2);
+    assert!(mixed_and_results.iter().any(|r| r.key == entity_ids[1])); // priority = 2, version = 2
+    assert!(mixed_and_results.iter().any(|r| r.key == entity_ids[2])); // priority = 3, version = 1
+
+    let mixed_or_results = client
+        .query_entities("priority != 2 || version >= 3")
+        .await?;
+    assert_eq!(mixed_or_results.len(), 3);
+    assert!(mixed_or_results.iter().any(|r| r.key == entity_ids[0])); // priority = 1
+    assert!(mixed_or_results.iter().any(|r| r.key == entity_ids[2])); // priority = 3
+    assert!(mixed_or_results.iter().any(|r| r.key == entity_ids[3])); // version = 3
+
     // Test empty result
     let empty_results = client.query_entities("type = \"nonexistent\"").await?;
     assert!(empty_results.is_empty());
