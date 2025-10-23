@@ -1,12 +1,12 @@
 use anyhow::Result;
 
 use alloy::primitives::Address;
-use golem_base_sdk::client::GolemBaseClient;
-use golem_base_sdk::entity::{Create, Hash};
+use arkiv_sdk::client::ArkivClient;
+use arkiv_sdk::entity::{Create, Hash};
 
 /// Creates a standard set of test entities for comprehensive testing
 pub async fn create_standard_test_entities(
-    client: &GolemBaseClient,
+    client: &ArkivClient,
     account: Address,
 ) -> Result<Vec<Hash>> {
     let entity1 = client
@@ -58,7 +58,7 @@ pub async fn create_standard_test_entities(
 
 /// Creates entities for testing owner-specific queries
 pub async fn create_owner_test_entities(
-    client: &GolemBaseClient,
+    client: &ArkivClient,
     account1: Address,
     account2: Address,
 ) -> Result<(Hash, Hash, Hash)> {
@@ -85,7 +85,7 @@ pub async fn create_owner_test_entities(
 
 /// Creates entities for testing expiration queries
 pub async fn create_expiration_test_entities(
-    client: &GolemBaseClient,
+    client: &ArkivClient,
     account: Address,
 ) -> Result<(Hash, Hash, Hash)> {
     let entity1 = client

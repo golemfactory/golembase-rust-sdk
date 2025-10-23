@@ -1,10 +1,10 @@
 use anyhow::Result;
 use serial_test::serial;
 
-use golem_base_sdk::{client::GolemBaseClient, entity::Create};
-use golem_base_test_utils::{
+use arkiv_sdk::{client::ArkivClient, entity::Create};
+use arkiv_test_utils::{
     cleanup_entities, create_test_account,
-    golembase::{Config, GolemBaseContainer},
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 
@@ -13,9 +13,9 @@ use golem_base_test_utils::{
 async fn test_query_entities() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
 
     // Create test account
     let account = create_test_account(&client).await?;

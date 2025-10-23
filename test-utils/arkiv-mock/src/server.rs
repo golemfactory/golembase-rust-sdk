@@ -6,21 +6,21 @@ use url::Url;
 use crate::api::{ArkivRpcServer, EthRpcServer};
 use crate::controller::MockController;
 use crate::transaction_pool::TransactionPool;
-use crate::GolemBaseMock;
+use crate::ArkivMock;
 
-/// GolemBase Mock Server
+/// Arkiv Mock Server
 #[derive(Clone)]
-pub struct GolemBaseMockServer {
-    pub state: GolemBaseMock,
+pub struct ArkivMockServer {
+    pub state: ArkivMock,
     pub url: Url,
     #[allow(dead_code)]
     server: Option<jsonrpsee::server::ServerHandle>,
 }
 
-impl GolemBaseMockServer {
+impl ArkivMockServer {
     pub fn new() -> Self {
         Self {
-            state: GolemBaseMock::new(),
+            state: ArkivMock::new(),
             url: Url::parse("http://127.0.0.1:8585").unwrap(),
             server: None,
         }

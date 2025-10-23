@@ -1,9 +1,9 @@
 use std::fmt::{Error, Formatter};
 
 use alloy::{primitives::B256, rpc::types::FilterSet};
-use golem_base_sdk::events::{
-    golem_base_storage_entity_created, golem_base_storage_entity_deleted,
-    golem_base_storage_entity_ttl_extended, golem_base_storage_entity_updated,
+use arkiv_sdk::events::{
+    arkiv_storage_entity_created, arkiv_storage_entity_deleted, arkiv_storage_entity_ttl_extended,
+    arkiv_storage_entity_updated,
 };
 
 pub struct DisplayEnabler<'a, Type>(pub &'a Type);
@@ -36,16 +36,10 @@ where
 /// Otherwise, returns the hash as a string.
 pub fn display_topic(topic: &B256) -> String {
     match *topic {
-        t if t == golem_base_storage_entity_created() => {
-            "GolemBaseStorageEntityCreated".to_string()
-        }
-        t if t == golem_base_storage_entity_deleted() => {
-            "GolemBaseStorageEntityDeleted".to_string()
-        }
-        t if t == golem_base_storage_entity_updated() => {
-            "GolemBaseStorageEntityUpdated".to_string()
-        }
-        t if t == golem_base_storage_entity_ttl_extended() => {
+        t if t == arkiv_storage_entity_created() => "GolemBaseStorageEntityCreated".to_string(),
+        t if t == arkiv_storage_entity_deleted() => "GolemBaseStorageEntityDeleted".to_string(),
+        t if t == arkiv_storage_entity_updated() => "GolemBaseStorageEntityUpdated".to_string(),
+        t if t == arkiv_storage_entity_ttl_extended() => {
             "GolemBaseStorageEntityTTLExptended".to_string()
         }
         _ => format!("{topic}"),

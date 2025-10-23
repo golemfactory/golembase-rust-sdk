@@ -1,12 +1,12 @@
 use std::time::{Duration, Instant};
 
 use bigdecimal::BigDecimal;
-use golem_base_mock::{
+use arkiv_mock::{
     controller::{CallOverride, CallResponse},
-    GolemBaseMockServer,
+    ArkivMockServer,
 };
-use golem_base_sdk::GolemBaseClient;
-use golem_base_test_utils::{create_test_account, init_logger};
+use arkiv_sdk::ArkivClient;
+use arkiv_test_utils::{create_test_account, init_logger};
 use serial_test::serial;
 
 /// Test validates proper handling of `error sending request` error.
@@ -15,9 +15,9 @@ use serial_test::serial;
 async fn test_resilient_client_retry() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     log::info!("Scenario 1: We should retry RPC call after getting `error sending request` error.");
@@ -67,9 +67,9 @@ async fn test_resilient_client_retry() -> anyhow::Result<()> {
 async fn test_resilient_client_no_healthy_backend() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     let _callback = ctrl.override_rpc(

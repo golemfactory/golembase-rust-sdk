@@ -2,7 +2,7 @@ use alloy::primitives::{Address, Bytes, B256, U256};
 use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Transaction, TransactionReceipt, TransactionRequest,
 };
-use golem_base_sdk::rpc::{QueryOptions, QueryResponse};
+use arkiv_sdk::rpc::{QueryOptions, QueryResponse};
 use jsonrpsee::core::{RpcResult, SubscriptionResult};
 use jsonrpsee::proc_macros::rpc;
 

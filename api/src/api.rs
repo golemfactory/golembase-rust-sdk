@@ -1,11 +1,11 @@
 use actix_web::{web, HttpResponse, Responder};
-use golem_base_sdk::entity::{Create, Entity, Update};
-use golem_base_sdk::{Address, GolemBaseClient, Hash};
+use arkiv_sdk::entity::{Create, Entity, Update};
+use arkiv_sdk::{Address, ArkivClient, Hash};
 use sqlx::Row;
 use sqlx::SqlitePool;
 
 pub async fn create_entity(
-    client: web::Data<GolemBaseClient>,
+    client: web::Data<ArkivClient>,
     db_pool: web::Data<SqlitePool>,
     item: web::Json<Create>,
 ) -> impl Responder {
@@ -26,7 +26,7 @@ pub async fn create_entity(
 }
 
 pub async fn get_entities(
-    client: web::Data<GolemBaseClient>,
+    client: web::Data<ArkivClient>,
     db_pool: web::Data<SqlitePool>,
     owner_address: web::Path<Address>,
 ) -> impl Responder {
@@ -60,7 +60,7 @@ pub async fn get_entities(
 }
 
 pub async fn update_entity(
-    client: web::Data<GolemBaseClient>,
+    client: web::Data<ArkivClient>,
     db_pool: web::Data<SqlitePool>,
     item: web::Json<Update>,
 ) -> impl Responder {
@@ -79,7 +79,7 @@ pub async fn update_entity(
 }
 
 pub async fn delete_entity(
-    client: web::Data<GolemBaseClient>,
+    client: web::Data<ArkivClient>,
     db_pool: web::Data<SqlitePool>,
     entity_key: web::Path<String>,
 ) -> impl Responder {

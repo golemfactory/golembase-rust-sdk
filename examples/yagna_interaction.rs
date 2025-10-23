@@ -7,8 +7,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
 use bigdecimal::BigDecimal;
-use golem_base_sdk::client::GolemBaseClient;
-use golem_base_sdk::entity::Create;
+use arkiv_sdk::client::ArkivClient;
+use arkiv_sdk::entity::Create;
 
 /// Simple program to connect to a Geth node
 #[derive(Parser, Debug)]
@@ -26,7 +26,7 @@ struct Args {
     #[arg(short, long, default_value = "test123")]
     password: String,
 
-    /// Entry to store in Golem Base (defaults to "test payload")
+    /// Entry to store in Arkiv (defaults to "test payload")
     #[arg(short, long, default_value = "test payload")]
     entry: String,
 
@@ -45,9 +45,9 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    // Connect to GolemBase
+    // Connect to Arkiv
     let endpoint = Url::parse(&args.url)?;
-    let client = GolemBaseClient::new(endpoint)?;
+    let client = ArkivClient::new(endpoint)?;
 
     // Get accounts
     let accounts = client

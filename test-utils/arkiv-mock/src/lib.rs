@@ -8,7 +8,7 @@ use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Log, Transaction, TransactionReceipt,
     TransactionRequest,
 };
-use golem_base_sdk::rpc::{QueryOptions, QueryResponse, SearchResult};
+use arkiv_sdk::rpc::{QueryOptions, QueryResponse, SearchResult};
 use jsonrpsee::core::{async_trait, RpcResult, StringError, SubscriptionResult};
 use jsonrpsee::types::{ErrorCode, ErrorObject};
 use jsonrpsee::{PendingSubscriptionSink, SubscriptionMessage};
@@ -39,7 +39,7 @@ pub mod server;
 pub mod transaction_pool;
 
 // Re-export symbols for user of the library.
-pub use server::GolemBaseMockServer;
+pub use server::ArkivMockServer;
 
 /// Helper function to create ErrorObject with a typed ErrorCode and message
 pub fn create_error(code: ErrorCode, message: impl Into<String>) -> ErrorObject<'static> {
@@ -91,7 +91,7 @@ macro_rules! return_override {
 
 /// Mock implementation of RPC methods (both Ethereum and GolemBase)
 #[derive(Clone)]
-pub struct GolemBaseMock {
+pub struct ArkivMock {
     blockchain: Blockchain,
     entity_db: EntityDb,
     transaction_pool: TransactionPool,
@@ -101,7 +101,7 @@ pub struct GolemBaseMock {
     event_emitter: Arc<EventEmitter>,
 }
 
-impl GolemBaseMock {
+impl ArkivMock {
     pub fn new() -> Self {
         let entity_db = EntityDb::new();
         let events = Arc::new(EventEmitter::new());
@@ -136,11 +136,11 @@ impl GolemBaseMock {
     ///
     /// Note that this function must be used in very specific way to work correctly:
     /// ```
-    /// # use golem_base_mock::{GolemBaseMock, return_override};
+    /// # use arkiv_mock::{ArkivMock, return_override};
     /// # use jsonrpsee::core::RpcResult;
     ///
     /// fn main() -> RpcResult<()> {
-    ///     let mock = GolemBaseMock::new();
+    ///     let mock = ArkivMock::new();
     ///
     ///     let _override = mock.next_override("eth_getTransactionCount")?;
     ///     return_override!(_override, ());
@@ -188,7 +188,7 @@ impl GolemBaseMock {
 }
 
 #[async_trait]
-impl EthRpcServer for GolemBaseMock {
+impl EthRpcServer for ArkivMock {
     async fn get_transaction_count(
         &self,
         address: Address,
@@ -635,7 +635,7 @@ impl EthRpcServer for GolemBaseMock {
 }
 
 #[async_trait]
-impl ArkivRpcServer for GolemBaseMock {
+impl ArkivRpcServer for ArkivMock {
     async fn get_entity_count(&self) -> RpcResult<u64> {
         let _override = self.next_override("arkiv_getEntityCount")?;
         return_override!(_override, u64);
@@ -671,7 +671,7 @@ impl ArkivRpcServer for GolemBaseMock {
     }
 }
 
-impl GolemBaseMock {
+impl ArkivMock {
     /// Creates a new account with a random private key
     pub fn create_account(&self) -> Address {
         self.managed_accounts.create_account()

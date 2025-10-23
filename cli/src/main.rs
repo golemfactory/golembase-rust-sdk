@@ -1,20 +1,20 @@
 use anyhow::Result;
-use bigdecimal::BigDecimal;
-use clap::{Parser, Subcommand};
-use dirs::config_dir;
-use golem_base_sdk::{
-    client::GolemBaseClient,
+use arkiv_sdk::{
+    client::ArkivClient,
     signers::{InMemorySigner, TransactionSigner},
     Address,
 };
+use bigdecimal::BigDecimal;
+use clap::{Parser, Subcommand};
+use dirs::config_dir;
 use std::fs;
 use url::Url;
 
-/// Program to fund and transfer funds between accounts on Golem Base
+/// Program to fund and transfer funds between accounts on Arkiv
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// URL of the GolemBase node
+    /// URL of the Arkiv node
     #[arg(short, long, default_value = "http://localhost:8545")]
     url: String,
 
@@ -84,7 +84,7 @@ pub enum AccountCommand {
 }
 
 impl AccountCommand {
-    async fn execute(&self, client: &GolemBaseClient) -> Result<()> {
+    async fn execute(&self, client: &ArkivClient) -> Result<()> {
         match self {
             AccountCommand::List => self.handle_list(client).await,
             AccountCommand::Create { password, raw } => {
@@ -105,7 +105,7 @@ impl AccountCommand {
         }
     }
 
-    async fn handle_list(&self, client: &GolemBaseClient) -> Result<()> {
+    async fn handle_list(&self, client: &ArkivClient) -> Result<()> {
         let accounts = client.account_sync().await?;
         println!("Available accounts:");
         for &addr in &accounts {
@@ -115,12 +115,7 @@ impl AccountCommand {
         Ok(())
     }
 
-    async fn handle_create(
-        &self,
-        client: &GolemBaseClient,
-        password: &str,
-        raw: bool,
-    ) -> Result<()> {
+    async fn handle_create(&self, client: &ArkivClient, password: &str, raw: bool) -> Result<()> {
         if raw {
             // Generate a new private key
             let signer = InMemorySigner::generate();
@@ -147,7 +142,7 @@ impl AccountCommand {
 
     async fn handle_fund(
         &self,
-        client: &GolemBaseClient,
+        client: &ArkivClient,
         wallet: Option<Address>,
         amount: BigDecimal,
     ) -> Result<()> {
@@ -172,7 +167,7 @@ impl AccountCommand {
 
     async fn handle_transfer(
         &self,
-        client: &GolemBaseClient,
+        client: &ArkivClient,
         from: Address,
         to: Address,
         amount: BigDecimal,
@@ -193,7 +188,7 @@ impl AccountCommand {
 }
 
 impl Command {
-    async fn execute(&self, client: &GolemBaseClient) -> Result<()> {
+    async fn execute(&self, client: &ArkivClient) -> Result<()> {
         match self {
             Command::Account { command } => command.execute(client).await,
             Command::GetEntity { id } => self.handle_get_entity(client, id).await,
@@ -201,13 +196,13 @@ impl Command {
         }
     }
 
-    async fn handle_get_entity(&self, client: &GolemBaseClient, id: &str) -> Result<()> {
+    async fn handle_get_entity(&self, client: &ArkivClient, id: &str) -> Result<()> {
         let entry = client.cat(id.parse()?).await?;
         println!("Entry: {}", entry);
         Ok(())
     }
 
-    async fn handle_wait_sync(&self, client: &GolemBaseClient, timeout: u64) -> Result<()> {
+    async fn handle_wait_sync(&self, client: &ArkivClient, timeout: u64) -> Result<()> {
         println!("Waiting for node to sync (timeout: {} seconds)...", timeout);
         client
             .sync_node(std::time::Duration::from_secs(timeout))
@@ -223,7 +218,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
     let endpoint = Url::parse(&args.url)?;
-    let client = GolemBaseClient::new(endpoint)?;
+    let client = ArkivClient::new(endpoint)?;
 
     // Sync accounts first
     client.account_sync().await?;

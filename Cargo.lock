@@ -1162,6 +1162,131 @@ dependencies = [
 ]
 
 [[package]]
+name = "arkiv-mock"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-json-rpc",
+ "anyhow",
+ "arkiv-sdk",
+ "arkiv-test-utils",
+ "async-trait",
+ "bigdecimal",
+ "bytes",
+ "derive_more",
+ "futures",
+ "futures-util",
+ "hex",
+ "humantime",
+ "jsonrpsee",
+ "log",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "tokio",
+ "tokio-stream",
+ "url",
+]
+
+[[package]]
+name = "arkiv-sdk"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-json-rpc",
+ "alloy-rlp",
+ "alloy-signer-local",
+ "anyhow",
+ "arkiv-mock",
+ "arkiv-test-utils",
+ "async-trait",
+ "bigdecimal",
+ "bon",
+ "bytes",
+ "clap",
+ "derive_more",
+ "dirs 5.0.1",
+ "displaydoc",
+ "env_logger 0.10.2",
+ "futures",
+ "hex",
+ "humantime",
+ "log",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "thiserror 2.0.12",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "arkiv-sdk-api"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "arkiv-sdk",
+ "clap",
+ "dirs 4.0.0",
+ "env_logger 0.10.2",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "warp",
+]
+
+[[package]]
+name = "arkiv-sdk-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arkiv-sdk",
+ "bigdecimal",
+ "clap",
+ "dirs 5.0.1",
+ "env_logger 0.11.8",
+ "log",
+ "thiserror 1.0.69",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "arkiv-sdk-demo"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "arkiv-sdk",
+ "bytes",
+ "dirs 6.0.0",
+ "env_logger 0.11.8",
+ "log",
+ "tokio",
+]
+
+[[package]]
+name = "arkiv-test-utils"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "arkiv-mock",
+ "arkiv-sdk",
+ "bigdecimal",
+ "env_logger 0.10.2",
+ "humantime",
+ "log",
+ "tempfile",
+ "testcontainers",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2463,131 +2588,6 @@ name = "glob"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
-
-[[package]]
-name = "golem-base-mock"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "alloy-json-rpc",
- "anyhow",
- "async-trait",
- "bigdecimal",
- "bytes",
- "derive_more",
- "futures",
- "futures-util",
- "golem-base-sdk",
- "golem-base-test-utils",
- "hex",
- "humantime",
- "jsonrpsee",
- "log",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "serial_test",
- "tokio",
- "tokio-stream",
- "url",
-]
-
-[[package]]
-name = "golem-base-sdk"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "alloy-json-rpc",
- "alloy-rlp",
- "alloy-signer-local",
- "anyhow",
- "async-trait",
- "bigdecimal",
- "bon",
- "bytes",
- "clap",
- "derive_more",
- "dirs 5.0.1",
- "displaydoc",
- "env_logger 0.10.2",
- "futures",
- "golem-base-mock",
- "golem-base-test-utils",
- "hex",
- "humantime",
- "log",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "serial_test",
- "thiserror 2.0.12",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "golem-base-sdk-api"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "clap",
- "dirs 4.0.0",
- "env_logger 0.10.2",
- "golem-base-sdk",
- "log",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "warp",
-]
-
-[[package]]
-name = "golem-base-sdk-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bigdecimal",
- "clap",
- "dirs 5.0.1",
- "env_logger 0.11.8",
- "golem-base-sdk",
- "log",
- "thiserror 1.0.69",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "golem-base-sdk-demo"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "bytes",
- "dirs 6.0.0",
- "env_logger 0.11.8",
- "golem-base-sdk",
- "log",
- "tokio",
-]
-
-[[package]]
-name = "golem-base-test-utils"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "anyhow",
- "bigdecimal",
- "env_logger 0.10.2",
- "golem-base-mock",
- "golem-base-sdk",
- "humantime",
- "log",
- "tempfile",
- "testcontainers",
- "tokio",
- "url",
-]
 
 [[package]]
 name = "group"

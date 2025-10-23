@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use dirs::config_dir;
-use golem_base_sdk::{GolemBaseClient, Hash, PrivateKeySigner, Url};
+use arkiv_sdk::{ArkivClient, Hash, PrivateKeySigner, Url};
 use sqlx::SqlitePool;
 use tokio::fs;
 
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rpc_url = Url::parse(&cli.rpc_url).expect("Invalid URL format");
 
     let mut private_key_path = config_dir().ok_or("Failed to get config directory")?;
-    private_key_path.push("golembase/private.key");
+    private_key_path.push("arkiv/private.key");
 
     let private_key_bytes = fs::read(&private_key_path).await?;
     let private_key = Hash::from_slice(&private_key_bytes);
@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer = PrivateKeySigner::from_bytes(&private_key)
         .map_err(|e| format!("Failed to parse private key: {}", e))?;
 
-    let client = GolemBaseClient::builder()
+    let client = ArkivClient::builder()
         .wallet(signer)
         .rpc_url(rpc_url)
         .build();

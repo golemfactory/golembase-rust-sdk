@@ -1,5 +1,5 @@
 [package]
-name = "golem-base-mock"
+name = "arkiv-mock"
 version = "0.1.0"
 edition = "2021"
 
@@ -22,11 +22,11 @@ tokio-stream = "0.1"
 futures-util = "0.3"
 url = "2.5"
 
-golem-base-sdk = { workspace = true }
+arkiv-sdk = { workspace = true }
 
 [dev-dependencies]
-golem-base-sdk = { workspace = true }
-golem-base-test-utils = { workspace = true }
+arkiv-sdk = { workspace = true }
+arkiv-test-utils = { workspace = true }
 bigdecimal = "0.4"
 futures = "0.3"
 serial_test = "3.2"

@@ -4,16 +4,16 @@ use dirs::config_dir;
 use serial_test::serial;
 use std::fs;
 
-use golem_base_sdk::{client::GolemBaseClient, entity::Create, PrivateKeySigner};
-use golem_base_test_utils::{
-    golembase::{Config, GolemBaseContainer},
+use arkiv_sdk::{client::ArkivClient, entity::Create, PrivateKeySigner};
+use arkiv_test_utils::{
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 
-fn get_client(container: &GolemBaseContainer) -> Result<GolemBaseClient> {
+fn get_client(container: &ArkivContainer) -> Result<ArkivClient> {
     let mut private_key_path =
         config_dir().ok_or_else(|| anyhow!("Failed to get config directory"))?;
-    private_key_path.push("golembase/private.key");
+    private_key_path.push("arkiv/private.key");
     let private_key_bytes = fs::read(&private_key_path)?;
     let private_key = B256::from_slice(&private_key_bytes);
 
@@ -22,7 +22,7 @@ fn get_client(container: &GolemBaseContainer) -> Result<GolemBaseClient> {
 
     let url = container.get_url()?;
 
-    let client = GolemBaseClient::builder()
+    let client = ArkivClient::builder()
         .wallet(signer)
         .rpc_url(url)
         .build();
@@ -35,8 +35,8 @@ fn get_client(container: &GolemBaseContainer) -> Result<GolemBaseClient> {
 async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
     let client = get_client(&container)?;
 
     // Number of entities to create per task

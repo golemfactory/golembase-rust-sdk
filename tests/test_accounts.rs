@@ -1,13 +1,13 @@
 use anyhow::Result;
 use bigdecimal::BigDecimal;
-use golem_base_test_utils::{
-    golembase::{Config, GolemBaseContainer},
+use arkiv_test_utils::{
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 use serial_test::serial;
 use std::fs;
 
-use golem_base_sdk::{client::GolemBaseClient, signers::InMemorySigner, PrivateKeySigner};
+use arkiv_sdk::{client::ArkivClient, signers::InMemorySigner, PrivateKeySigner};
 
 const TEST_PRIVATE_KEY_FILE: &str = "test_private.key";
 
@@ -16,9 +16,9 @@ const TEST_PRIVATE_KEY_FILE: &str = "test_private.key";
 async fn test_account_creation_and_funding() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
 
     // Create new account
     let account = client.account_generate("test123").await?;
@@ -48,15 +48,15 @@ async fn test_account_loading_by_address() -> Result<()> {
     init_logger(false);
 
     // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client1 = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client1 = ArkivClient::new(container.get_url()?)?;
 
     // Create new account with first client
     let account = client1.account_generate("test123").await?;
     log::info!("Created new account: {account}");
 
     // Create new client and load account by address
-    let client2 = GolemBaseClient::new(container.get_url()?)?;
+    let client2 = ArkivClient::new(container.get_url()?)?;
     let loaded_account = client2.account_load(account, "test123").await?;
     log::info!("Loaded account by address: {loaded_account}");
 
@@ -70,9 +70,9 @@ async fn test_account_loading_by_address() -> Result<()> {
 async fn test_account_loading_from_private_key() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
 
     // Generate a new private key
     let signer = PrivateKeySigner::random();
@@ -105,9 +105,9 @@ async fn test_account_loading_from_private_key() -> Result<()> {
 async fn test_fund_transfer() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
 
     // Create two accounts
     let account1 = client.account_generate("test123").await?;

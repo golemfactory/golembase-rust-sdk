@@ -1,17 +1,17 @@
 use anyhow::Result;
 use serial_test::serial;
 
-use golem_base_sdk::{
-    client::GolemBaseClient,
+use arkiv_sdk::{
+    client::ArkivClient,
     entity::{Create, Hash},
     rpc::QueryOptions,
 };
-use golem_base_test_utils::{
+use arkiv_test_utils::{
     create_test_account,
     entity_set::{
         create_expiration_test_entities, create_owner_test_entities, create_standard_test_entities,
     },
-    golembase::{Config, GolemBaseContainer},
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 
@@ -20,8 +20,8 @@ use golem_base_test_utils::{
 async fn test_get_entity_count() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Test initial count (should be 0)
@@ -48,8 +48,8 @@ async fn test_get_entity_count() -> Result<()> {
 async fn test_get_all_entity_keys() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Test initial state (should be empty)
@@ -82,8 +82,8 @@ async fn test_get_all_entity_keys() -> Result<()> {
 async fn test_get_entities_of_owner() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account1 = create_test_account(&client).await?;
     let account2 = create_test_account(&client).await?;
 
@@ -103,7 +103,7 @@ async fn test_get_entities_of_owner() -> Result<()> {
     assert!(account2_entities.contains(&entity3));
 
     // Test getting entities for non-existent account
-    let non_existent_account = golem_base_sdk::Address::from([0u8; 20]);
+    let non_existent_account = arkiv_sdk::Address::from([0u8; 20]);
     let non_existent_entities = client.get_entities_of_owner(non_existent_account).await?;
     assert!(non_existent_entities.is_empty());
 
@@ -115,8 +115,8 @@ async fn test_get_entities_of_owner() -> Result<()> {
 async fn test_get_storage_value() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create test entity
@@ -150,8 +150,8 @@ async fn test_get_storage_value() -> Result<()> {
 async fn test_query_with_options() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create test entities
@@ -225,8 +225,8 @@ async fn test_query_with_options() -> Result<()> {
 async fn test_query_entities() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create test entities
@@ -324,8 +324,8 @@ async fn test_query_entities() -> Result<()> {
 async fn test_get_entity_metadata() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create test entity
@@ -399,8 +399,8 @@ async fn test_get_entity_metadata() -> Result<()> {
 async fn test_get_entities_to_expire_at_block() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Get current block number
@@ -451,8 +451,8 @@ async fn test_get_entities_to_expire_at_block() -> Result<()> {
 async fn test_query_entities_with_empty_annotations() -> Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create entities with no annotations

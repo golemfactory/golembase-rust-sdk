@@ -4,14 +4,14 @@ use anyhow::Result;
 use bigdecimal::BigDecimal;
 use std::env;
 
-use golem_base_sdk::client::GolemBaseClient;
-use golem_base_sdk::entity::Hash;
+use arkiv_sdk::client::ArkivClient;
+use arkiv_sdk::entity::Hash;
 
 pub mod entity_set;
-pub mod golembase;
+pub mod arkiv;
 
-/// Default URL for GolemBase node in tests
-pub const GOLEM_BASE_URL: &str = "http://localhost:8545";
+/// Default URL for Arkiv node in tests
+pub const ARKIV_URL: &str = "http://localhost:8545";
 
 /// Default TTL value for test entities
 pub const TEST_TTL: u64 = 30;
@@ -37,8 +37,8 @@ pub fn init_logger(should_init: bool) {
     }
 }
 
-/// Removes all existing entities from the GolemBase node
-pub async fn cleanup_entities(client: &GolemBaseClient, account: Address) -> Result<()> {
+/// Removes all existing entities from the Arkiv node
+pub async fn cleanup_entities(client: &ArkivClient, account: Address) -> Result<()> {
     let all_entity_keys = client.get_all_entity_keys().await?;
     log::info!("Removing all existing entities: {:?}", all_entity_keys);
     if !all_entity_keys.is_empty() {
@@ -48,7 +48,7 @@ pub async fn cleanup_entities(client: &GolemBaseClient, account: Address) -> Res
 }
 
 /// Creates a new test account with initial funding
-pub async fn create_test_account(client: &GolemBaseClient) -> Result<Address> {
+pub async fn create_test_account(client: &ArkivClient) -> Result<Address> {
     let account = client.account_generate("test123").await?;
     let fund_tx = client.fund(account, BigDecimal::from(1)).await?;
     let balance = client.get_balance(account).await?;
@@ -60,7 +60,7 @@ pub async fn create_test_account(client: &GolemBaseClient) -> Result<Address> {
 /// Finds the transaction that created an entry by searching backwards through blocks.
 /// Returns (transaction_hash, block_number) or None if not found.
 pub async fn find_entry_creation_transaction(
-    client: &GolemBaseClient,
+    client: &ArkivClient,
     entry_id: Hash,
 ) -> Result<Option<(B256, u64)>> {
     let current_block = client.get_current_block_number().await?;
@@ -73,7 +73,7 @@ pub async fn find_entry_creation_transaction(
 
         for tx in block.transactions.hashes() {
             if let Ok(Some(receipt)) = client.get_rpc_client().get_transaction_receipt(tx).await {
-                if let Ok(log_entry_id) = GolemBaseClient::extract_entity_id(receipt.logs()) {
+                if let Ok(log_entry_id) = ArkivClient::extract_entity_id(receipt.logs()) {
                     if log_entry_id == entry_id {
                         return Ok(Some((tx, block_number)));
                     }

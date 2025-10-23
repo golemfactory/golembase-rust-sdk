@@ -1,15 +1,15 @@
 use anyhow::Result;
-use golem_base_test_utils::find_entry_creation_transaction;
+use arkiv_test_utils::find_entry_creation_transaction;
 use serial_test::serial;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use golem_base_sdk::{
-    client::GolemBaseClient,
+use arkiv_sdk::{
+    client::ArkivClient,
     entity::{Create, Update},
 };
-use golem_base_test_utils::{
+use arkiv_test_utils::{
     create_test_account,
-    golembase::{Config, GolemBaseContainer},
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 
@@ -18,9 +18,9 @@ use golem_base_test_utils::{
 async fn test_create_and_retrieve_entry() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     let test_payload = b"test payload".to_vec();
@@ -58,9 +58,9 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
 async fn test_entity_operations() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Create first entity
@@ -136,9 +136,9 @@ async fn test_entity_operations() -> Result<()> {
 async fn test_concurrent_entity_creation_batch() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
     // Number of entities to create per task

@@ -1,9 +1,9 @@
 use alloy::primitives::{keccak256, Address, B256};
 use anyhow::{anyhow, Result};
+use arkiv_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
+use arkiv_sdk::rpc::{serialize_hex, SearchResult};
+use arkiv_sdk::rpc::{IncludeData, QueryOptions};
 use bytes::Bytes;
-use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
-use golem_base_sdk::rpc::{serialize_hex, SearchResult};
-use golem_base_sdk::rpc::{IncludeData, QueryOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::string::FromUtf8Error;
@@ -184,7 +184,7 @@ impl Entity {
     }
 }
 
-impl TryFrom<Entity> for golem_base_sdk::entity::Entity {
+impl TryFrom<Entity> for arkiv_sdk::entity::Entity {
     type Error = FromUtf8Error;
 
     fn try_from(local_entity: Entity) -> Result<Self, Self::Error> {

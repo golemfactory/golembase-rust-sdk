@@ -18,7 +18,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::task::LocalSet;
 
 use crate::client::TransactionConfig;
-use crate::entity::{GolemBaseTransaction, Hash};
+use crate::entity::{ArkivTransaction, Hash};
 use crate::resilient_provider::ResilientProvider;
 use crate::signers::TransactionSigner;
 use crate::utils::eth_to_wei;
@@ -75,9 +75,9 @@ impl NonceInfo {
     }
 }
 
-/// The address of the GolemBase storage processor contract.
+/// The address of the Arkiv storage processor contract.
 /// All storage-related transactions are sent to this contract address.
-pub const GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS: Address =
+pub const ARKIV_STORAGE_PROCESSOR_ADDRESS: Address =
     address!("0x0000000000000000000000000000000060138453");
 
 /// Response type for queued transactions.
@@ -119,9 +119,9 @@ struct TransactionQueue {
 }
 
 /// Event signature for extending BTL (block time to live) of an entity.
-/// Used to identify `GolemBaseStorageEntityBTLExtended` events in logs.
-pub fn golem_base_storage_entity_btl_extended() -> B256 {
-    keccak256(b"GolemBaseStorageEntityBTLExtended(uint256,uint256)")
+/// Used to identify `ArkivStorageEntityBTLExtended` events in logs.
+pub fn arkiv_storage_entity_btl_extended() -> B256 {
+    keccak256(b"ArkivStorageEntityBTLExtended(uint256,uint256)")
 }
 
 impl TransactionQueue {
@@ -416,7 +416,7 @@ impl TransactionQueue {
 }
 
 /// An account with its signer.
-/// Provides methods for sending transactions, funding, and interacting with GolemBase storage.
+/// Provides methods for sending transactions, funding, and interacting with Arkiv storage.
 #[derive(Clone)]
 pub struct Account {
     /// The account's signer for signing transactions.
@@ -487,17 +487,14 @@ impl Account {
         channel.receipt().await
     }
 
-    /// Creates and sends a storage transaction to the GolemBase contract.
+    /// Creates and sends a storage transaction to the Arkiv contract.
     /// Encodes the transaction payload and submits it to the storage processor contract.
-    pub async fn send_db_transaction(
-        &self,
-        tx: GolemBaseTransaction,
-    ) -> Result<TransactionReceipt> {
+    pub async fn send_db_transaction(&self, tx: ArkivTransaction) -> Result<TransactionReceipt> {
         let mut data = Vec::new();
         tx.encode(&mut data);
 
         let tx = TransactionRequest::default()
-            .with_to(GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS)
+            .with_to(ARKIV_STORAGE_PROCESSOR_ADDRESS)
             .with_gas_limit(self.tx_config.gas_limit)
             .with_max_priority_fee_per_gas(self.tx_config.max_priority_fee_per_gas)
             .with_max_fee_per_gas(self.tx_config.max_fee_per_gas)

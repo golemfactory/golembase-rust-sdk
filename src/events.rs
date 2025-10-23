@@ -10,34 +10,34 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::pin::Pin;
 
-use crate::account::GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS;
+use crate::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
 use crate::entity::Hash;
 
 /// Returns the event signature hash for entity creation logs.
 /// Used to identify `GolemBaseStorageEntityCreated` events in the blockchain logs.
-pub fn golem_base_storage_entity_created() -> B256 {
+pub fn arkiv_storage_entity_created() -> B256 {
     keccak256(b"GolemBaseStorageEntityCreated(uint256,uint256)")
 }
 
 /// Returns the event signature hash for entity deletion logs.
 /// Used to identify `GolemBaseStorageEntityDeleted` events in the blockchain logs.
-pub fn golem_base_storage_entity_deleted() -> B256 {
+pub fn arkiv_storage_entity_deleted() -> B256 {
     keccak256(b"GolemBaseStorageEntityDeleted(uint256)")
 }
 
 /// Returns the event signature hash for entity update logs.
 /// Used to identify `GolemBaseStorageEntityUpdated` events in the blockchain logs.
-pub fn golem_base_storage_entity_updated() -> B256 {
+pub fn arkiv_storage_entity_updated() -> B256 {
     keccak256(b"GolemBaseStorageEntityUpdated(uint256,uint256)")
 }
 
 /// Returns the event signature hash for TTL extension logs.
-/// Used to identify `GolemBaseStorageEntityTTLExptended` events in the blockchain logs.
-pub fn golem_base_storage_entity_ttl_extended() -> B256 {
-    keccak256(b"GolemBaseStorageEntityTTLExptended(uint256,uint256)")
+/// Used to identify `GolemBaseStorageEntityBTLExtended` events in the blockchain logs.
+pub fn arkiv_storage_entity_ttl_extended() -> B256 {
+    keccak256(b"GolemBaseStorageEntityBTLExtended(uint256,uint256)")
 }
 
-/// Represents a GolemBase event parsed from the blockchain log.
+/// Represents an Arkiv event parsed from the blockchain log.
 /// Used to distinguish between entity creation, update, and removal events.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Event {
@@ -94,17 +94,17 @@ impl TryFrom<Log> for Event {
         let transaction_hash = Hash::from(transaction_hash);
 
         match log.topics()[0] {
-            topic if topic == golem_base_storage_entity_created() => Ok(Event::EntityCreated {
+            topic if topic == arkiv_storage_entity_created() => Ok(Event::EntityCreated {
                 entity_id,
                 block_number,
                 transaction_hash,
             }),
-            topic if topic == golem_base_storage_entity_updated() => Ok(Event::EntityUpdated {
+            topic if topic == arkiv_storage_entity_updated() => Ok(Event::EntityUpdated {
                 entity_id,
                 block_number,
                 transaction_hash,
             }),
-            topic if topic == golem_base_storage_entity_deleted() => Ok(Event::EntityRemoved {
+            topic if topic == arkiv_storage_entity_deleted() => Ok(Event::EntityRemoved {
                 entity_id,
                 block_number,
                 transaction_hash,
@@ -114,7 +114,7 @@ impl TryFrom<Log> for Event {
     }
 }
 
-/// Client for subscribing to and streaming GolemBase events from the blockchain.
+/// Client for subscribing to and streaming Arkiv events from the blockchain.
 /// Provides methods to connect to a node and receive event streams for entity changes.
 pub struct EventsClient {
     provider: DynProvider,
@@ -135,7 +135,7 @@ impl EventsClient {
         Ok(Self { provider })
     }
 
-    /// Listens for GolemBase events from the blockchain, starting from the latest block.
+    /// Listens for Arkiv events from the blockchain, starting from the latest block.
     /// Returns a stream of parsed `Event` items that can be processed asynchronously.
     pub async fn events_stream<'a>(
         &'a self,
@@ -144,7 +144,7 @@ impl EventsClient {
         self.create_stream_from_filter(filter).await
     }
 
-    /// Listens for GolemBase events starting from a specific block number.
+    /// Listens for Arkiv events starting from a specific block number.
     /// Returns a stream of parsed `Event` items from the given block onward.
     ///
     /// # Arguments
@@ -157,15 +157,15 @@ impl EventsClient {
         self.create_stream_from_filter(filter).await
     }
 
-    /// Creates a filter for GolemBase events, specifying the contract address and event signatures.
+    /// Creates a filter for Arkiv events, specifying the contract address and event signatures.
     fn create_event_filter(&self, block: BlockNumberOrTag) -> Filter {
         Filter::new()
-            .address(GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS)
+            .address(ARKIV_STORAGE_PROCESSOR_ADDRESS)
             .from_block(block)
             .event_signature(vec![
-                golem_base_storage_entity_created(),
-                golem_base_storage_entity_updated(),
-                golem_base_storage_entity_deleted(),
+                arkiv_storage_entity_created(),
+                arkiv_storage_entity_updated(),
+                arkiv_storage_entity_deleted(),
             ])
     }
 
