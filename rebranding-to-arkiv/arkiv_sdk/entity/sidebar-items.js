@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Annotation","ArkivTransaction","Create","DeleteResult","Entity","EntityResult","Extend","ExtendResult","Update"],"type":["ArkivDelete","Hash","Key","NumericAnnotation","StringAnnotation"]};

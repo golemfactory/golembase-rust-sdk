@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ARKIV_STORAGE_PROCESSOR_ADDRESS"],"fn":["arkiv_storage_entity_btl_extended","get_receipt"],"struct":["Account","NonceInfo","TransactionChannel"]};

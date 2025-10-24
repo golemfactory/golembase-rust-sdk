@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Event"],"fn":["arkiv_storage_entity_created","arkiv_storage_entity_deleted","arkiv_storage_entity_ttl_extended","arkiv_storage_entity_updated"],"struct":["EventsClient"]};
