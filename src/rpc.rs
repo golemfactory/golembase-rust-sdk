@@ -191,6 +191,12 @@ impl QueryOptions {
         }
     }
 
+    /// Sets the page size for pagination.
+    pub fn with_page_size(mut self, page_size: u64) -> Self {
+        self.results_per_page = page_size;
+        self
+    }
+
     /// Sets the block number at which to query entities.
     pub fn at_block(mut self, at_block: u64) -> Self {
         self.at_block = Some(at_block);
@@ -464,7 +470,7 @@ impl ArkivClient {
         let mut error_count = 0u32;
         let mut all_results = Vec::new();
 
-        let mut stream = Box::pin(self.query_raw(query, options));
+        let mut stream = Box::pin(self.query_streamed(query, options));
 
         while let Some(result) = stream.next().await {
             match result {
@@ -526,7 +532,7 @@ impl ArkivClient {
     /// Automatically handles cursor-based pagination by making subsequent RPC calls.
     /// If results_per_page is 0, uses the default value from the client's TransactionConfig,
     /// falling back to `DEFAULT_RESULTS_PER_PAGE` constant if config is not available.
-    pub fn query_raw(
+    pub fn query_streamed(
         &self,
         query: &str,
         options: &QueryOptions,

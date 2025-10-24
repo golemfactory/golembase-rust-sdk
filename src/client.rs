@@ -421,15 +421,35 @@ impl ArkivClient {
     /// Creates an entry using the specified account.
     /// Returns the entity ID of the created entry.
     pub async fn create_entry(&self, account: Address, entry: Create) -> anyhow::Result<Hash> {
+        let entity_ids = self.create_entries(account, vec![entry]).await?;
+        Self::extract_entity_id(entity_ids)
+    }
+
+    /// Creates multiple entries in a single transaction using the specified account.
+    /// Returns a vector of entity IDs (keys) of the created entries.
+    pub async fn create_entries(
+        &self,
+        account: Address,
+        entries: Vec<Create>,
+    ) -> anyhow::Result<Vec<Hash>> {
+        if entries.is_empty() {
+            return Ok(vec![]);
+        }
+
         let account = self.account_get(account)?;
+        let entry_count = entries.len();
         let tx = ArkivTransaction {
-            creates: vec![entry],
+            creates: entries,
             updates: vec![],
             deletes: vec![],
             extensions: vec![],
         };
 
-        log::debug!("Sending storage transaction from {}", account.address());
+        log::debug!(
+            "Sending batch storage transaction from {} for {} entries",
+            account.address(),
+            entry_count
+        );
 
         let receipt = account.send_db_transaction(tx).await?;
         if !receipt.status() {
@@ -439,19 +459,19 @@ impl ArkivClient {
             ));
         }
 
-        // Parse logs to get entity ID
-        let entity_id = Self::extract_entity_id(receipt.logs())?;
+        // Extract all entity IDs from the logs
+        let entity_ids = Self::extract_entity_ids(receipt.logs());
 
-        log::debug!("Created entity with ID: 0x{:x}", entity_id);
-        Ok(entity_id)
+        log::debug!("Created {} entities in batch", entity_ids.len());
+        Ok(entity_ids)
     }
 
-    /// Extracts entity ID from transaction logs by looking for ArkivStorageEntityCreated events.
-    /// Returns the entity ID if found, or an error if not found.
-    pub fn extract_entity_id(logs: &[Log]) -> anyhow::Result<Hash> {
+    /// Extracts all entity IDs from transaction logs by looking for ArkivStorageEntityCreated events.
+    /// Returns a vector of entity IDs (keys) from the logs.
+    pub fn extract_entity_ids(logs: &[Log]) -> Vec<Hash> {
         logs.iter()
             .inspect(|log| log::trace!("Log: {:?}", log))
-            .find_map(|log| {
+            .filter_map(|log| {
                 if log.topics().len() >= 2 && log.topics()[0] == arkiv_storage_entity_created() {
                     // Second topic is the entity ID
                     Some(log.topics()[1])
@@ -459,7 +479,25 @@ impl ArkivClient {
                     None
                 }
             })
-            .ok_or_else(|| anyhow::anyhow!("No entity ID found in transaction logs"))
+            .collect()
+    }
+
+    /// Extracts a single entity ID from a vector of entity IDs.
+    /// Validates that exactly one entity ID exists and warns if more than one is found.
+    /// Returns the first entity ID or an error if none are found.
+    pub fn extract_entity_id(entity_ids: Vec<Hash>) -> anyhow::Result<Hash> {
+        if entity_ids.is_empty() {
+            return Err(anyhow::anyhow!("No entity ID returned from create_entries"));
+        }
+
+        if entity_ids.len() > 1 {
+            log::warn!(
+                "extract_entity_id expected 1 entity ID but got {} - this should not happen",
+                entity_ids.len()
+            );
+        }
+
+        Ok(entity_ids[0])
     }
 
     /// Removes entries from Arkiv.

@@ -7,8 +7,8 @@ use std::env;
 use arkiv_sdk::client::ArkivClient;
 use arkiv_sdk::entity::Hash;
 
-pub mod entity_set;
 pub mod arkiv;
+pub mod entity_set;
 
 /// Default URL for Arkiv node in tests
 pub const ARKIV_URL: &str = "http://localhost:8545";
@@ -73,7 +73,9 @@ pub async fn find_entry_creation_transaction(
 
         for tx in block.transactions.hashes() {
             if let Ok(Some(receipt)) = client.get_rpc_client().get_transaction_receipt(tx).await {
-                if let Ok(log_entry_id) = ArkivClient::extract_entity_id(receipt.logs()) {
+                if let Ok(log_entry_id) =
+                    ArkivClient::extract_entity_id(ArkivClient::extract_entity_ids(receipt.logs()))
+                {
                     if log_entry_id == entry_id {
                         return Ok(Some((tx, block_number)));
                     }

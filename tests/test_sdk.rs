@@ -6,7 +6,7 @@ use std::fs;
 
 use arkiv_sdk::{client::ArkivClient, entity::Create, PrivateKeySigner};
 use arkiv_test_utils::{
-    arkiv::{Config, ArkivContainer},
+    arkiv::{ArkivContainer, Config},
     init_logger,
 };
 
@@ -22,10 +22,7 @@ fn get_client(container: &ArkivContainer) -> Result<ArkivClient> {
 
     let url = container.get_url()?;
 
-    let client = ArkivClient::builder()
-        .wallet(signer)
-        .rpc_url(url)
-        .build();
+    let client = ArkivClient::builder().wallet(signer).rpc_url(url).build();
     Ok(client)
 }
 

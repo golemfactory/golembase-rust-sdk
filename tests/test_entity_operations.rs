@@ -8,9 +8,8 @@ use arkiv_sdk::{
     entity::{Create, Update},
 };
 use arkiv_test_utils::{
-    create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger,
+    arkiv::{ArkivContainer, Config},
+    create_test_account, init_logger,
 };
 
 #[tokio::test]
@@ -206,6 +205,53 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
     log::info!(
         "Successfully verified {} concurrent single entity creations",
         ENTITIES_PER_TASK * 2
+    );
+    Ok(())
+}
+
+#[tokio::test]
+#[serial]
+async fn test_batch_entity_creation() -> Result<()> {
+    init_logger(false);
+
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
+    let account = create_test_account(&client).await?;
+
+    // Create multiple entities in a single batch
+    let mut creates = Vec::new();
+    for i in 0..5 {
+        let payload = format!("batch_entity_{}", i).into_bytes();
+        let entry = Create::new(payload, 300)
+            .annotate_string("batch", "test")
+            .annotate_number("index", i as u64);
+        creates.push(entry);
+    }
+
+    // Use the batch creation function that returns entity IDs
+    let entity_ids = client.create_entries(account, creates).await?;
+
+    // Verify we got the expected number of entity IDs
+    assert_eq!(entity_ids.len(), 5);
+
+    // Verify each entity ID and retrieve the data.
+    // This checks if entity IDs were retrieved in order.
+    for (i, entity_id) in entity_ids.iter().enumerate() {
+        // Verify we can retrieve the entity data
+        let entry_str = client.cat(*entity_id).await?;
+        assert_eq!(entry_str, format!("batch_entity_{}", i));
+
+        // Verify metadata
+        let metadata = client.get_entity_metadata(*entity_id).await?;
+        assert_eq!(metadata.string_annotations[0].value, "test");
+        assert_eq!(metadata.numeric_annotations[0].value, i as u64);
+        assert_eq!(metadata.owner.unwrap(), account);
+    }
+
+    log::info!(
+        "Successfully verified batch entity creation with {} entity IDs",
+        entity_ids.len()
     );
     Ok(())
 }
