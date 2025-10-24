@@ -90,6 +90,21 @@ pub struct QueryResponse {
     pub cursor: Option<String>,
 }
 
+impl QueryResponse {
+    /// Normalizes the QueryResponse by normalizing all SearchResults in the data.
+    /// This ensures that zero addresses are converted to None in all search results.
+    pub fn normalize(self) -> Self {
+        Self {
+            data: self
+                .data
+                .into_iter()
+                .map(|result| result.normalize())
+                .collect(),
+            ..self
+        }
+    }
+}
+
 /// Options for querying entities in Arkiv.
 /// Controls pagination, data inclusion, and block number for queries.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -325,6 +340,22 @@ impl SearchResult {
         )
         .map_err(|e| anyhow::anyhow!("Failed to decode search result to string: {}", e))
     }
+
+    /// Normalizes the SearchResult by converting zero addresses to None.
+    /// Arkiv returns owner as 0x0 as a default value when we didn't ask for address.
+    /// This method replaces it with proper None to not mislead users.
+    pub fn normalize(self) -> Self {
+        Self {
+            owner: self
+                .owner
+                .map(|owner| match owner {
+                    addr if addr == Address::from(U160::ZERO) => None,
+                    _ => Some(owner),
+                })
+                .flatten(),
+            ..self
+        }
+    }
 }
 
 impl ArkivClient {
@@ -431,22 +462,7 @@ impl ArkivClient {
             .rpc_call::<(&str, &QueryOptions), QueryResponse>("arkiv_query", (&query, options))
             .await?;
 
-        // Arkiv returns owner as 0x0 as a default value, when we didn't ask for address.
-        // We need to replace it with proper None to not mislead users.
-        Ok(response
-            .data
-            .into_iter()
-            .map(|result| SearchResult {
-                owner: result
-                    .owner
-                    .map(|owner| match owner {
-                        addr if addr == Address::from(U160::ZERO) => None,
-                        _ => Some(owner),
-                    })
-                    .flatten(),
-                ..result
-            })
-            .collect())
+        Ok(response.normalize().data)
     }
 
     /// Queries entities in Arkiv based on annotations.
