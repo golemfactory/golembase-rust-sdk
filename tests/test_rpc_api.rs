@@ -7,11 +7,11 @@ use arkiv_sdk::{
     rpc::QueryOptions,
 };
 use arkiv_test_utils::{
+    arkiv::{ArkivContainer, Config},
     create_test_account,
     entity_set::{
         create_expiration_test_entities, create_owner_test_entities, create_standard_test_entities,
     },
-    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 
@@ -203,19 +203,6 @@ async fn test_query_with_options() -> Result<()> {
         assert!(result.expires_at.is_some());
         assert!(result.owner.is_some());
     }
-
-    // Test query with pagination
-    let mut pagination_options = QueryOptions::new()
-        .with_key()
-        .with_payload()
-        .with_annotations(true)
-        .with_expires_at()
-        .with_owner_address();
-    pagination_options.results_per_page = 2;
-    let pagination_results = client
-        .query_with_options("type = \"test\" || type = \"demo\"", &pagination_options)
-        .await?;
-    assert!(pagination_results.len() <= 2);
 
     Ok(())
 }

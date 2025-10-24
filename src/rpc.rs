@@ -4,6 +4,7 @@ use alloy_json_rpc::RpcError as AlloyError;
 use anyhow::anyhow;
 use bytes::Bytes;
 use displaydoc::Display;
+use futures::stream::{self, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -175,7 +176,7 @@ impl QueryOptions {
         Self {
             at_block: None,
             include_data: Some(IncludeData::keys_only()),
-            results_per_page: 100,
+            results_per_page: crate::client::DEFAULT_RESULTS_PER_PAGE,
             cursor: None,
         }
     }
@@ -185,7 +186,7 @@ impl QueryOptions {
         Self {
             at_block: None,
             include_data: Some(IncludeData::all()),
-            results_per_page: 100,
+            results_per_page: crate::client::DEFAULT_RESULTS_PER_PAGE,
             cursor: None,
         }
     }
@@ -453,16 +454,36 @@ impl ArkivClient {
 
     /// Queries entities in Arkiv based on annotations with custom options.
     /// Returns a vector of `SearchResult` matching the query string and options.
+    /// Collects all results from the paginated stream, ignoring up to `max_query_errors` errors.
     pub async fn query_with_options(
         &self,
         query: &str,
         options: &QueryOptions,
     ) -> Result<Vec<SearchResult>, Error> {
-        let response = self
-            .rpc_call::<(&str, &QueryOptions), QueryResponse>("arkiv_query", (&query, options))
-            .await?;
+        let max_errors = self.tx_config.max_query_errors;
+        let mut error_count = 0u32;
+        let mut all_results = Vec::new();
 
-        Ok(response.normalize().data)
+        let mut stream = Box::pin(self.query_raw(query, options));
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(mut results) => {
+                    all_results.append(&mut results);
+                }
+                Err(e) => {
+                    error_count += 1;
+                    if error_count > max_errors {
+                        return Err(Error::UnexpectedError(format!(
+                            "Too many query errors: {error_count} (max allowed: {max_errors}) - Last error: {e}"
+                        )));
+                    }
+                    log::warn!("Query error ({error_count} of {max_errors}): {e}");
+                }
+            }
+        }
+
+        Ok(all_results)
     }
 
     /// Queries entities in Arkiv based on annotations.
@@ -499,5 +520,71 @@ impl ArkivClient {
     /// Returns a `SearchResult` containing the entity's metadata including annotations, owner, and expiration.
     pub async fn get_entity_metadata(&self, key: Hash) -> Result<SearchResult, Error> {
         self.get_entity(key).await
+    }
+
+    /// Queries entities in Arkiv with pagination support, returning a stream of results.
+    /// Automatically handles cursor-based pagination by making subsequent RPC calls.
+    /// If results_per_page is 0, uses the default value from the client's TransactionConfig,
+    /// falling back to `DEFAULT_RESULTS_PER_PAGE` constant if config is not available.
+    pub fn query_raw(
+        &self,
+        query: &str,
+        options: &QueryOptions,
+    ) -> impl Stream<Item = Result<Vec<SearchResult>, Error>> + '_ {
+        let query = query.to_string();
+        let mut options = options.clone();
+
+        // Set default results per page if not specified
+        if options.results_per_page == 0 {
+            options.results_per_page = self.tx_config.default_results_per_page;
+        }
+
+        stream::unfold(Some(options), move |state| {
+            let client = self;
+            let query = query.clone();
+
+            async move {
+                let mut options = match state {
+                    Some(state) => state,
+                    // If no cursor was returned in previous iteration, we've reached the end of the stream.
+                    None => return None,
+                };
+
+                log::trace!("Querying entities with query: {query}, options: {options:?}");
+                let response = client
+                    .rpc_call::<(&str, &QueryOptions), QueryResponse>(
+                        "arkiv_query",
+                        (&query, &options),
+                    )
+                    .await;
+
+                log::trace!("Received query response: {response:?}");
+                match response {
+                    Ok(response) => {
+                        let response = response.normalize();
+                        let data = response.data;
+
+                        // Ensure that we query state from the same block even if user didn't
+                        // provide any specific block number.
+                        options.at_block = Some(response.block_number);
+
+                        match response.cursor {
+                            Some(cursor) => {
+                                // Update cursor as new starting position for the query in next iteration.
+                                let next_options = QueryOptions {
+                                    cursor: Some(cursor),
+                                    ..options
+                                };
+                                Some((Ok(data), Some(next_options)))
+                            }
+                            // If cursor is None, we've reached the end of the stream and we will return
+                            // None to end the stream in next iteration.
+                            None => Some((Ok(data), None)),
+                        }
+                    }
+                    Err(e) => Some((Err(e), Some(options))),
+                }
+            }
+        })
     }
 }

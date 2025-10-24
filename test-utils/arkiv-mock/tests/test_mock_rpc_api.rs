@@ -204,20 +204,6 @@ async fn test_mock_query_with_options() -> Result<()> {
         assert!(result.owner.is_some());
     }
 
-    // TODO: Uncomment when pagination is implemented
-    // // Test query with pagination
-    // let mut pagination_options = QueryOptions::new()
-    //     .with_key()
-    //     .with_payload()
-    //     .with_annotations(true)
-    //     .with_expires_at()
-    //     .with_owner_address();
-    // pagination_options.results_per_page = 2;
-    // let pagination_results = client
-    //     .query_with_options("type = \"test\" || type = \"demo\"", &pagination_options)
-    //     .await?;
-    // assert!(pagination_results.len() <= 2);
-
     Ok(())
 }
 

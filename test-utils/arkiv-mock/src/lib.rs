@@ -662,12 +662,15 @@ impl ArkivRpcServer for ArkivMock {
             .await
             .map_err(|e| internal_error(format!("Error getting block number: {e}")))?;
 
-        Ok(QueryResponse {
+        let response = QueryResponse {
             data: results,
             block_number: block_number,
             // No pagination in mock implementation
             cursor: None,
-        })
+        };
+
+        log::trace!("Query response: {:?}", response);
+        Ok(response)
     }
 }
 

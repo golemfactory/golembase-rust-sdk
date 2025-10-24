@@ -48,6 +48,9 @@ impl NonceManager {
     }
 }
 
+/// Default number of results per page for queries
+pub const DEFAULT_RESULTS_PER_PAGE: u64 = 100;
+
 /// Configuration for transaction parameters.
 /// Holds gas and fee settings used for sending transactions.
 #[derive(Debug, Clone)]
@@ -70,6 +73,10 @@ pub struct TransactionConfig {
     pub required_confirmations: u64,
     /// Optional chain ID for validation. If None, SDK will query chain ID from chain.
     pub chain_id: Option<u64>,
+    /// Default number of results per page for queries.
+    pub default_results_per_page: u64,
+    /// Maximum number of query errors to ignore before giving up.
+    pub max_query_errors: u32,
 }
 
 impl Default for TransactionConfig {
@@ -84,6 +91,8 @@ impl Default for TransactionConfig {
             price_bump_percent: 100,
             required_confirmations: 0,
             chain_id: None,
+            default_results_per_page: DEFAULT_RESULTS_PER_PAGE,
+            max_query_errors: 3,
         }
     }
 }
