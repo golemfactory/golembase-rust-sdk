@@ -363,6 +363,18 @@ impl SearchResult {
             ..self
         }
     }
+
+    /// Finds a string annotation by its key.
+    /// Returns `Some(annotation)` if found, `None` otherwise.
+    pub fn find_string_annotation(&self, key: &str) -> Option<&StringAnnotation> {
+        self.string_annotations.iter().find(|a| a.key == key)
+    }
+
+    /// Finds a numeric annotation by its key.
+    /// Returns `Some(annotation)` if found, `None` otherwise.
+    pub fn find_numeric_annotation(&self, key: &str) -> Option<&NumericAnnotation> {
+        self.numeric_annotations.iter().find(|a| a.key == key)
+    }
 }
 
 impl ArkivClient {
