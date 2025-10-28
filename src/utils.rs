@@ -2,6 +2,7 @@ use alloy::primitives::U256;
 use bigdecimal::{BigDecimal, ToPrimitive};
 use std::str::FromStr;
 
+use crate::entity::{NumericAnnotation, StringAnnotation};
 use crate::rpc::SearchResult;
 
 /// Converts an ETH amount to wei as a `U256`.
@@ -47,4 +48,24 @@ pub fn assert_numeric_annotation(metadata: &SearchResult, key: &str, expected_va
         "Numeric annotation '{}' has unexpected value",
         key
     );
+}
+
+/// Filters out built-in annotations (those starting with '$') from string annotations.
+/// Returns only user-created annotations.
+pub fn user_string_annotations(metadata: &SearchResult) -> Vec<&StringAnnotation> {
+    metadata
+        .string_annotations
+        .iter()
+        .filter(|a| !a.key.starts_with('$'))
+        .collect()
+}
+
+/// Filters out built-in annotations (those starting with '$') from numeric annotations.
+/// Returns only user-created annotations.
+pub fn user_numeric_annotations(metadata: &SearchResult) -> Vec<&NumericAnnotation> {
+    metadata
+        .numeric_annotations
+        .iter()
+        .filter(|a| !a.key.starts_with('$'))
+        .collect()
 }

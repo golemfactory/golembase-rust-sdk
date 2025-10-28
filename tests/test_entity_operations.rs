@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use arkiv_sdk::{
     client::ArkivClient,
     entity::{Create, Update},
+    utils::{assert_numeric_annotation, assert_string_annotation},
 };
 use arkiv_test_utils::{
     arkiv::{ArkivContainer, Config},
@@ -44,8 +45,8 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
     let metadata = client.get_entity_metadata(entry_id).await?;
     log::info!("Retrieved metadata for entry 0x{entry_id:x}: {metadata:?}");
 
-    assert_eq!(metadata.string_annotations[0].value, "Test");
-    assert_eq!(metadata.numeric_annotations[0].value, timestamp);
+    assert_string_annotation(&metadata, "test_type", "Test");
+    assert_numeric_annotation(&metadata, "test_timestamp", timestamp);
     assert_eq!(metadata.owner.unwrap(), account);
     // Entry should be created in start_block + 1.
     assert_eq!(metadata.expires_at.unwrap(), start_block + 1000);

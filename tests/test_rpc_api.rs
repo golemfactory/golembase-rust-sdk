@@ -5,6 +5,10 @@ use arkiv_sdk::{
     client::ArkivClient,
     entity::{Create, Hash},
     rpc::QueryOptions,
+    utils::{
+        assert_numeric_annotation, assert_string_annotation, user_numeric_annotations,
+        user_string_annotations,
+    },
 };
 use arkiv_test_utils::{
     arkiv::{ArkivContainer, Config},
@@ -342,36 +346,12 @@ async fn test_get_entity_metadata() -> Result<()> {
     assert_eq!(metadata.owner.unwrap(), account);
 
     // Verify string annotations
-    assert_eq!(metadata.string_annotations.len(), 2);
-    let type_annotation = metadata
-        .string_annotations
-        .iter()
-        .find(|a| a.key == "type")
-        .unwrap();
-    assert_eq!(type_annotation.value, "metadata_test");
-
-    let category_annotation = metadata
-        .string_annotations
-        .iter()
-        .find(|a| a.key == "category")
-        .unwrap();
-    assert_eq!(category_annotation.value, "test");
+    assert_string_annotation(&metadata, "type", "metadata_test");
+    assert_string_annotation(&metadata, "category", "test");
 
     // Verify numeric annotations
-    assert_eq!(metadata.numeric_annotations.len(), 2);
-    let priority_annotation = metadata
-        .numeric_annotations
-        .iter()
-        .find(|a| a.key == "priority")
-        .unwrap();
-    assert_eq!(priority_annotation.value, 5);
-
-    let version_annotation = metadata
-        .numeric_annotations
-        .iter()
-        .find(|a| a.key == "version")
-        .unwrap();
-    assert_eq!(version_annotation.value, 10);
+    assert_numeric_annotation(&metadata, "priority", 5);
+    assert_numeric_annotation(&metadata, "version", 10);
 
     // Test getting metadata for non-existent entity
     let non_existent_id = Hash::from([0u8; 32]);
@@ -467,14 +447,17 @@ async fn test_query_entities_with_empty_annotations() -> Result<()> {
         .get_entity_metadata(entity_without_annotations)
         .await?;
 
-    // Verify that empty annotations lists are properly deserialized
+    // Verify that user annotations are empty (meta annotations may be present)
+    let user_strings = user_string_annotations(&entity_no_annotations);
+    let user_numerics = user_numeric_annotations(&entity_no_annotations);
+
     assert!(
-        entity_no_annotations.string_annotations.is_empty(),
-        "String annotations should be empty"
+        user_strings.is_empty(),
+        "User string annotations should be empty, but found: {user_strings:?}"
     );
     assert!(
-        entity_no_annotations.numeric_annotations.is_empty(),
-        "Numeric annotations should be empty"
+        user_numerics.is_empty(),
+        "User numeric annotations should be empty, but found: {user_numerics:?}"
     );
 
     // Verify other fields are present
@@ -498,16 +481,22 @@ async fn test_query_entities_with_empty_annotations() -> Result<()> {
 
     // Test getting entities with specific annotations to ensure they don't interfere
     let entity_string_only = client.get_entity_metadata(entity_with_string_only).await?;
-    assert!(!entity_string_only.string_annotations.is_empty());
-    assert!(entity_string_only.numeric_annotations.is_empty());
+    let user_strings = user_string_annotations(&entity_string_only);
+    let user_numerics = user_numeric_annotations(&entity_string_only);
+    assert!(!user_strings.is_empty());
+    assert!(user_numerics.is_empty());
 
     let entity_numeric_only = client.get_entity_metadata(entity_with_numeric_only).await?;
-    assert!(entity_numeric_only.string_annotations.is_empty());
-    assert!(!entity_numeric_only.numeric_annotations.is_empty());
+    let user_strings = user_string_annotations(&entity_numeric_only);
+    let user_numerics = user_numeric_annotations(&entity_numeric_only);
+    assert!(user_strings.is_empty());
+    assert!(!user_numerics.is_empty());
 
     let entity_both = client.get_entity_metadata(entity_with_both).await?;
-    assert!(!entity_both.string_annotations.is_empty());
-    assert!(!entity_both.numeric_annotations.is_empty());
+    let user_strings = user_string_annotations(&entity_both);
+    let user_numerics = user_numeric_annotations(&entity_both);
+    assert!(!user_strings.is_empty());
+    assert!(!user_numerics.is_empty());
 
     Ok(())
 }

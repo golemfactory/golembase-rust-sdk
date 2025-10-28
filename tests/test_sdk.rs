@@ -4,7 +4,12 @@ use dirs::config_dir;
 use serial_test::serial;
 use std::fs;
 
-use arkiv_sdk::{client::ArkivClient, entity::Create, PrivateKeySigner};
+use arkiv_sdk::{
+    client::ArkivClient,
+    entity::Create,
+    utils::{assert_numeric_annotation, assert_string_annotation},
+    PrivateKeySigner,
+};
 use arkiv_test_utils::{
     arkiv::{ArkivContainer, Config},
     init_logger,
@@ -83,8 +88,8 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         assert_eq!(entry_str, format!("task1_entity_{}", i));
 
         let metadata = client.get_entity_metadata(result.entity_key).await?;
-        assert_eq!(metadata.string_annotations[0].value, "task1");
-        assert_eq!(metadata.numeric_annotations[0].value, i as u64);
+        assert_string_annotation(&metadata, "task", "task1");
+        assert_numeric_annotation(&metadata, "index", i as u64);
     }
 
     for (i, result) in task2_entities.iter().enumerate() {
@@ -92,8 +97,8 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         assert_eq!(entry_str, format!("task2_entity_{}", i));
 
         let metadata = client.get_entity_metadata(result.entity_key).await?;
-        assert_eq!(metadata.string_annotations[0].value, "task2");
-        assert_eq!(metadata.numeric_annotations[0].value, i as u64);
+        assert_string_annotation(&metadata, "task", "task2");
+        assert_numeric_annotation(&metadata, "index", i as u64);
     }
 
     log::info!(
