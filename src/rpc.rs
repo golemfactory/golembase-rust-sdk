@@ -431,9 +431,9 @@ impl ArkivClient {
         let search = self.query_with_options(&query, &options).await?;
 
         if search.is_empty() {
-            return Err(Error::UnexpectedError(
-                "No entity found with the given key".to_string(),
-            ));
+            return Err(Error::UnexpectedError(format!(
+                "No entity found with the given key: {key}"
+            )));
         }
 
         if search.len() > 1 {
