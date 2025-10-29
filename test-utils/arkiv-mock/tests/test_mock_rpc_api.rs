@@ -16,7 +16,7 @@ use arkiv_test_utils::{
 };
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_entity_count() -> Result<()> {
     init_logger(false);
 
@@ -44,7 +44,7 @@ async fn test_mock_get_entity_count() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_all_entity_keys() -> Result<()> {
     init_logger(false);
 
@@ -78,7 +78,7 @@ async fn test_mock_get_all_entity_keys() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_entities_of_owner() -> Result<()> {
     init_logger(false);
 
@@ -111,7 +111,7 @@ async fn test_mock_get_entities_of_owner() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_storage_value() -> Result<()> {
     init_logger(false);
 
@@ -146,7 +146,7 @@ async fn test_mock_get_storage_value() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_query_with_options() -> Result<()> {
     init_logger(false);
 
@@ -208,7 +208,7 @@ async fn test_mock_query_with_options() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_query_entities() -> Result<()> {
     init_logger(false);
 
@@ -307,7 +307,7 @@ async fn test_mock_query_entities() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_entity_metadata() -> Result<()> {
     init_logger(false);
 
@@ -382,7 +382,7 @@ async fn test_mock_get_entity_metadata() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_get_entities_to_expire_at_block() -> Result<()> {
     init_logger(false);
 
@@ -434,7 +434,7 @@ async fn test_mock_get_entities_to_expire_at_block() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_mock_query_entities_with_empty_annotations() -> Result<()> {
     init_logger(false);
 

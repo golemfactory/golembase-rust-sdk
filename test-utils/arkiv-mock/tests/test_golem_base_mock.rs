@@ -16,7 +16,7 @@ use serial_test::serial;
 
 /// Comprehensive integration test that demonstrates using the Arkiv mock server with ArkivClient
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -101,7 +101,7 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
 
 // Test triggering callback for CallOverride::Once.
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_golem_base_mock_once_callback_waiting() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -150,7 +150,7 @@ async fn test_golem_base_mock_once_callback_waiting() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -207,7 +207,7 @@ async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_golem_base_mock_expiration() -> anyhow::Result<()> {
     init_logger(false);
 

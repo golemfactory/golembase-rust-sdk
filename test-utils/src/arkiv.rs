@@ -174,7 +174,8 @@ impl ArkivContainer {
 
         let mut container_request = GenericImage::new(&config.image, &config.tag)
             .with_wait_for(WaitFor::message_on_stderr("HTTP server started"))
-            .with_mapped_port(port, ContainerPort::Tcp(port))
+            //.with_mapped_port(port, ContainerPort::Tcp(port))
+            .with_exposed_port(ContainerPort::Tcp(port))
             .with_log_consumer(|line: &LogFrame| {
                 log::info!("[Arkiv]: {}", String::from_utf8_lossy(&line.bytes()))
             })

@@ -33,7 +33,7 @@ fn get_client(container: &ArkivContainer) -> Result<ArkivClient> {
 
 #[ignore]
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
     init_logger(false);
 

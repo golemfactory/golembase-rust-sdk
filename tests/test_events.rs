@@ -1,19 +1,18 @@
 use anyhow::Result;
-use futures::StreamExt;
 use arkiv_sdk::ArkivClient;
+use futures::StreamExt;
 use serial_test::serial;
 use std::time::Duration;
 
 use arkiv_sdk::entity::{Create, Update};
 use arkiv_sdk::events::Event;
 use arkiv_test_utils::{
-    cleanup_entities, create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger, TEST_TTL,
+    arkiv::{ArkivContainer, Config},
+    cleanup_entities, create_test_account, init_logger, TEST_TTL,
 };
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_event_listening() -> Result<()> {
     init_logger(false);
 
@@ -72,7 +71,7 @@ async fn test_event_listening() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_event_listening_with_timeout() -> Result<()> {
     init_logger(false);
 

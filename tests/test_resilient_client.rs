@@ -11,7 +11,7 @@ use serial_test::serial;
 
 /// Test validates proper handling of `error sending request` error.
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_resilient_client_retry() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -63,7 +63,7 @@ async fn test_resilient_client_retry() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_resilient_client_no_healthy_backend() -> anyhow::Result<()> {
     init_logger(false);
 

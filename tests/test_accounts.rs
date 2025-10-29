@@ -1,9 +1,9 @@
 use anyhow::Result;
-use bigdecimal::BigDecimal;
 use arkiv_test_utils::{
-    arkiv::{Config, ArkivContainer},
+    arkiv::{ArkivContainer, Config},
     init_logger,
 };
+use bigdecimal::BigDecimal;
 use serial_test::serial;
 use std::fs;
 
@@ -12,7 +12,7 @@ use arkiv_sdk::{client::ArkivClient, signers::InMemorySigner, PrivateKeySigner};
 const TEST_PRIVATE_KEY_FILE: &str = "test_private.key";
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_account_creation_and_funding() -> Result<()> {
     init_logger(false);
 
@@ -43,7 +43,7 @@ async fn test_account_creation_and_funding() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_account_loading_by_address() -> Result<()> {
     init_logger(false);
 
@@ -66,7 +66,7 @@ async fn test_account_loading_by_address() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_account_loading_from_private_key() -> Result<()> {
     init_logger(false);
 
@@ -101,7 +101,7 @@ async fn test_account_loading_from_private_key() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_fund_transfer() -> Result<()> {
     init_logger(false);
 

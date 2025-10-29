@@ -14,7 +14,7 @@ use arkiv_test_utils::{
 };
 
 #[tokio::test]
-#[serial]
+////#[serial]
 async fn test_create_and_retrieve_entry() -> Result<()> {
     init_logger(false);
 
@@ -54,7 +54,7 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+////#[serial]
 async fn test_entity_operations() -> Result<()> {
     init_logger(false);
 

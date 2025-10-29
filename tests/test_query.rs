@@ -3,13 +3,12 @@ use serial_test::serial;
 
 use arkiv_sdk::{client::ArkivClient, entity::Create};
 use arkiv_test_utils::{
-    cleanup_entities, create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger,
+    arkiv::{ArkivContainer, Config},
+    cleanup_entities, create_test_account, init_logger,
 };
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_query_entities() -> Result<()> {
     init_logger(false);
 

@@ -54,7 +54,7 @@ impl TransactionSigner for LocalTaskSigner {
 /// Test the custom signer with tokio spawn_local used in signer function.
 /// Using spawn_local can panic when is called outside of LocalSet.
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_custom_signer_with_spawn_local() -> Result<()> {
     init_logger(false);
 

@@ -16,7 +16,7 @@ use serial_test::serial;
 const NUM_ITERATIONS: usize = 50;
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_random_errors() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -48,7 +48,7 @@ async fn test_transaction_random_errors() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_indexing_in_progress() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -76,7 +76,7 @@ async fn test_transaction_indexing_in_progress() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -111,7 +111,7 @@ async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -151,7 +151,7 @@ async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_wait_for_confirmations() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -169,7 +169,7 @@ async fn test_transaction_wait_for_confirmations() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_rpc_pause() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -200,7 +200,7 @@ async fn test_transaction_rpc_pause() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -235,7 +235,7 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -264,7 +264,7 @@ async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_wrong_chain_id() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -294,7 +294,7 @@ async fn test_transaction_wrong_chain_id() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -336,7 +336,7 @@ async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_stacked_pending() -> anyhow::Result<()> {
     init_logger(false);
 
@@ -368,7 +368,7 @@ async fn test_transaction_stacked_pending() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_transaction_stacked_pending_for_infinity() -> anyhow::Result<()> {
     init_logger(false);
 

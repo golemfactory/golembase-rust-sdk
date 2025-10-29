@@ -12,7 +12,7 @@ use arkiv_test_utils::{
 };
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_concurrent_entity_creation_batch() -> Result<()> {
     init_logger(false);
 
@@ -91,7 +91,7 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+//#[serial]
 async fn test_batch_entity_creation() -> Result<()> {
     init_logger(false);
 
