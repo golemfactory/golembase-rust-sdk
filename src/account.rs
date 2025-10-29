@@ -1,3 +1,4 @@
+use alloy::consensus::transaction::SignerRecoverable;
 use alloy::consensus::{
     EthereumTxEnvelope, EthereumTypedTransaction, SignableTransaction, Signed, TxEip4844,
     TxEip4844Variant,

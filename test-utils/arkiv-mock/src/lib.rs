@@ -1,3 +1,4 @@
+use alloy::consensus::transaction::SignerRecoverable;
 use alloy::consensus::{
     Eip658Value, EthereumTxEnvelope, Receipt, ReceiptEnvelope, ReceiptWithBloom, TxEip4844,
     TxEip4844Variant,
