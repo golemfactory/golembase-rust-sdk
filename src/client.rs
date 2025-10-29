@@ -17,11 +17,11 @@ use log;
 use tokio::sync::Mutex;
 
 use crate::account::Account;
-use crate::entity::{Create, GolemBaseTransaction, Hash, Update};
-use crate::events::{golem_base_storage_entity_created, EventsClient};
+use crate::entity::{ArkivTransaction, Create, Hash, Update};
+use crate::events::{arkiv_storage_entity_created, EventsClient};
 use crate::resilient_provider::ResilientProvider;
 use crate::rpc::Error;
-use crate::signers::{GolemBaseSigner, InMemorySigner, TransactionSigner};
+use crate::signers::{ArkivSigner, InMemorySigner, TransactionSigner};
 use crate::utils::wei_to_eth;
 
 /// Tracks and assigns sequential Ethereum nonces for concurrent transactions.
@@ -48,6 +48,9 @@ impl NonceManager {
     }
 }
 
+/// Default number of results per page for queries
+pub const DEFAULT_RESULTS_PER_PAGE: u64 = 100;
+
 /// Configuration for transaction parameters.
 /// Holds gas and fee settings used for sending transactions.
 #[derive(Debug, Clone)]
@@ -70,6 +73,10 @@ pub struct TransactionConfig {
     pub required_confirmations: u64,
     /// Optional chain ID for validation. If None, SDK will query chain ID from chain.
     pub chain_id: Option<u64>,
+    /// Default number of results per page for queries.
+    pub default_results_per_page: u64,
+    /// Maximum number of query errors to ignore before giving up.
+    pub max_query_errors: u32,
 }
 
 impl Default for TransactionConfig {
@@ -84,19 +91,21 @@ impl Default for TransactionConfig {
             price_bump_percent: 100,
             required_confirmations: 0,
             chain_id: None,
+            default_results_per_page: DEFAULT_RESULTS_PER_PAGE,
+            max_query_errors: 3,
         }
     }
 }
 
-/// A client for interacting with the GolemBase system.
+/// A client for interacting with the Arkiv system.
 /// Provides methods for account management, entity operations, balance queries, and event subscriptions.
 #[derive(Clone)]
-pub struct GolemBaseClient {
+pub struct ArkivClient {
     /// The underlying provider for making RPC calls.
     pub(crate) provider: ResilientProvider,
     /// Registered accounts mapped by address.
     pub(crate) accounts: Arc<RwLock<HashMap<Address, Account>>>,
-    /// The URL of the GolemBase endpoint.
+    /// The URL of the Arkiv endpoint.
     pub(crate) rpc_url: Url,
     /// The Ethereum address of the client owner.
     pub(crate) wallet: PrivateKeySigner,
@@ -107,8 +116,8 @@ pub struct GolemBaseClient {
 }
 
 #[bon]
-impl GolemBaseClient {
-    /// Creates a new builder for `GolemBaseClient` with the given wallet and RPC URL.
+impl ArkivClient {
+    /// Creates a new builder for `ArkivClient` with the given wallet and RPC URL.
     /// Initializes the provider and sets up default configuration.
     #[builder]
     pub fn builder(wallet: PrivateKeySigner, rpc_url: Url) -> Self {
@@ -218,7 +227,7 @@ impl GolemBaseClient {
 
         // Validate chain ID if configured and get the actual chain ID
         let chain_id = self.validate_chain_id().await?;
-        self.sync_golem_base_accounts(chain_id).await?;
+        self.sync_arkiv_accounts(chain_id).await?;
         Ok(())
     }
 
@@ -310,8 +319,8 @@ impl GolemBaseClient {
         // Validate chain ID if configured and get the actual chain ID
         let chain_id = self.validate_chain_id().await?;
 
-        // Sync GolemBase accounts
-        self.sync_golem_base_accounts(chain_id).await?;
+        // Sync Arkiv accounts
+        self.sync_arkiv_accounts(chain_id).await?;
 
         // Get all available accounts
         let mut all_accounts = self.accounts_list();
@@ -354,18 +363,14 @@ impl GolemBaseClient {
         Ok(receipt.transaction_hash)
     }
 
-    /// Internal: synchronizes GolemBase accounts with the current chain ID.
-    async fn sync_golem_base_accounts(&self, chain_id: u64) -> anyhow::Result<()> {
-        let golem_accounts = self.list_golem_accounts().await?;
+    /// Internal: synchronizes Arkiv accounts with the current chain ID.
+    async fn sync_arkiv_accounts(&self, chain_id: u64) -> anyhow::Result<()> {
+        let arkiv_accounts = self.list_arkiv_accounts().await?;
         let mut accounts = self.accounts.write().unwrap();
 
-        for address in golem_accounts {
+        for address in arkiv_accounts {
             self.try_insert_account(&mut accounts, address, chain_id, |address| {
-                Box::new(GolemBaseSigner::new(
-                    address,
-                    self.provider.clone(),
-                    chain_id,
-                ))
+                Box::new(ArkivSigner::new(address, self.provider.clone(), chain_id))
             });
         }
 
@@ -408,23 +413,43 @@ impl GolemBaseClient {
             .ok_or_else(|| anyhow::anyhow!("Account {address} not found"))
     }
 
-    /// Internal: lists accounts from GolemBase.
-    async fn list_golem_accounts(&self) -> anyhow::Result<Vec<Address>> {
+    /// Internal: lists accounts from Arkiv.
+    async fn list_arkiv_accounts(&self) -> anyhow::Result<Vec<Address>> {
         Ok(self.provider.get_accounts().await?)
     }
 
     /// Creates an entry using the specified account.
     /// Returns the entity ID of the created entry.
     pub async fn create_entry(&self, account: Address, entry: Create) -> anyhow::Result<Hash> {
+        let entity_ids = self.create_entries(account, vec![entry]).await?;
+        Self::extract_entity_id(entity_ids)
+    }
+
+    /// Creates multiple entries in a single transaction using the specified account.
+    /// Returns a vector of entity IDs (keys) of the created entries.
+    pub async fn create_entries(
+        &self,
+        account: Address,
+        entries: Vec<Create>,
+    ) -> anyhow::Result<Vec<Hash>> {
+        if entries.is_empty() {
+            return Ok(vec![]);
+        }
+
         let account = self.account_get(account)?;
-        let tx = GolemBaseTransaction {
-            creates: vec![entry],
+        let entry_count = entries.len();
+        let tx = ArkivTransaction {
+            creates: entries,
             updates: vec![],
             deletes: vec![],
             extensions: vec![],
         };
 
-        log::debug!("Sending storage transaction from {}", account.address());
+        log::debug!(
+            "Sending batch storage transaction from {} for {} entries",
+            account.address(),
+            entry_count
+        );
 
         let receipt = account.send_db_transaction(tx).await?;
         if !receipt.status() {
@@ -434,31 +459,48 @@ impl GolemBaseClient {
             ));
         }
 
-        // Parse logs to get entity ID
-        let entity_id = Self::extract_entity_id(receipt.logs())?;
+        // Extract all entity IDs from the logs
+        let entity_ids = Self::extract_entity_ids(receipt.logs());
 
-        log::debug!("Created entity with ID: 0x{:x}", entity_id);
-        Ok(entity_id)
+        log::debug!("Created {} entities in batch", entity_ids.len());
+        Ok(entity_ids)
     }
 
-    /// Extracts entity ID from transaction logs by looking for GolemBaseStorageEntityCreated events.
-    /// Returns the entity ID if found, or an error if not found.
-    pub fn extract_entity_id(logs: &[Log]) -> anyhow::Result<Hash> {
+    /// Extracts all entity IDs from transaction logs by looking for ArkivStorageEntityCreated events.
+    /// Returns a vector of entity IDs (keys) from the logs.
+    pub fn extract_entity_ids(logs: &[Log]) -> Vec<Hash> {
         logs.iter()
             .inspect(|log| log::trace!("Log: {:?}", log))
-            .find_map(|log| {
-                if log.topics().len() >= 2 && log.topics()[0] == golem_base_storage_entity_created()
-                {
+            .filter_map(|log| {
+                if log.topics().len() >= 2 && log.topics()[0] == arkiv_storage_entity_created() {
                     // Second topic is the entity ID
                     Some(log.topics()[1])
                 } else {
                     None
                 }
             })
-            .ok_or_else(|| anyhow::anyhow!("No entity ID found in transaction logs"))
+            .collect()
     }
 
-    /// Removes entries from GolemBase.
+    /// Extracts a single entity ID from a vector of entity IDs.
+    /// Validates that exactly one entity ID exists and warns if more than one is found.
+    /// Returns the first entity ID or an error if none are found.
+    pub fn extract_entity_id(entity_ids: Vec<Hash>) -> anyhow::Result<Hash> {
+        if entity_ids.is_empty() {
+            return Err(anyhow::anyhow!("No entity ID returned from create_entries"));
+        }
+
+        if entity_ids.len() > 1 {
+            log::warn!(
+                "extract_entity_id expected 1 entity ID but got {} - this should not happen",
+                entity_ids.len()
+            );
+        }
+
+        Ok(entity_ids[0])
+    }
+
+    /// Removes entries from Arkiv.
     /// Deletes the specified entries owned by the given account.
     ///
     /// # Arguments
@@ -475,7 +517,7 @@ impl GolemBaseClient {
 
         let account = self.account_get(account)?;
         let entry_count = entry_ids.len();
-        let tx = GolemBaseTransaction {
+        let tx = ArkivTransaction {
             creates: vec![],
             updates: vec![],
             deletes: entry_ids,
@@ -500,7 +542,7 @@ impl GolemBaseClient {
         Ok(())
     }
 
-    /// Retrieves an entry's payload from GolemBase by its ID.
+    /// Retrieves an entry's payload from Arkiv by its ID.
     /// Returns the entry data as a `String`.
     pub async fn cat(&self, id: Hash) -> anyhow::Result<String> {
         let bytes = self.get_storage_value::<Bytes>(id).await?;
@@ -535,7 +577,7 @@ impl GolemBaseClient {
     pub async fn update_entry(&self, account: Address, update: Update) -> anyhow::Result<()> {
         let entity_key = update.entity_key;
         let account = self.account_get(account)?;
-        let tx = GolemBaseTransaction {
+        let tx = ArkivTransaction {
             creates: vec![],
             updates: vec![update],
             deletes: vec![],

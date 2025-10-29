@@ -1,6 +1,6 @@
-//! GolemBase container testing utilities.
+//! Arkiv container testing utilities.
 //!
-//! This module provides utilities for running GolemBase in containers for testing purposes.
+//! This module provides utilities for running Arkiv in containers for testing purposes.
 
 use std::time::Duration;
 use tempfile::TempDir;
@@ -10,9 +10,9 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use url::Url;
 
-/// Configuration for GolemBase container.
+/// Configuration for Arkiv container.
 pub struct Config {
-    /// Port for the GolemBase instance
+    /// Port for the Arkiv instance
     pub port: u16,
     /// Timeout for waiting for container to start
     pub timeout: Duration,
@@ -29,7 +29,7 @@ impl Default for Config {
         Self {
             port: 9545,
             timeout: Duration::from_secs(120), // Increased timeout for stability
-            image: "quay.io/golemnetwork/gb-op-geth".to_string(),
+            image: "golemnetwork/golembase-op-geth".to_string(),
             tag: "latest".to_string(),
             data_dir: None,
         }
@@ -37,7 +37,7 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Set the port for the GolemBase instance
+    /// Set the port for the Arkiv instance
     pub fn with_port(mut self, port: u16) -> Self {
         self.port = port;
         self
@@ -52,17 +52,17 @@ impl Config {
     /// Enable volume preservation between restarts.
     /// This will generate a unique temporary directory and mount it to preserve:
     /// - geth_data: Ethereum node data
-    /// - golembase_wal: GolemBase write-ahead log
-    /// - config: GolemBase configuration
+    /// - arkiv_wal: Arkiv write-ahead log
+    /// - config: Arkiv configuration
     pub fn preserve_volume(mut self) -> Self {
         self.data_dir = Some(Self::generate_temp_data_dir());
         self
     }
 
-    /// Generate a unique temporary directory for GolemBase data.
+    /// Generate a unique temporary directory for Arkiv data.
     fn generate_temp_data_dir() -> TempDir {
         tempfile::Builder::new()
-            .prefix("golembase-data-")
+            .prefix("arkiv-data-")
             .tempdir()
             .expect("Failed to create temporary directory")
     }
@@ -86,26 +86,26 @@ impl Config {
             let geth_data_mount = Mount::bind_mount(geth_data.display().to_string(), "/geth_data");
             container_request = container_request.with_mount(geth_data_mount);
 
-            // Mount golembase config directory as named volume
+            // Mount arkiv config directory as named volume
             let config_mount =
-                Mount::bind_mount(config.display().to_string(), "/root/.config/golembase");
+                Mount::bind_mount(config.display().to_string(), "/root/.config/arkiv");
             container_request = container_request.with_mount(config_mount);
         }
         Ok(container_request)
     }
 }
 
-/// Wrapper for GolemBase container that provides helper functions.
-pub struct GolemBaseContainer {
+/// Wrapper for Arkiv container that provides helper functions.
+pub struct ArkivContainer {
     container: ContainerAsync<GenericImage>,
     config: Config,
     mapped_port: u16,
 }
 
-impl GolemBaseContainer {
-    /// Initialize a new GolemBase container with the given configuration.
+impl ArkivContainer {
+    /// Initialize a new Arkiv container with the given configuration.
     pub async fn new(config: Config) -> Result<Self, anyhow::Error> {
-        let container = Self::init_golembase(&config).await?;
+        let container = Self::init_arkiv(&config).await?;
         let mapped_port = container.get_host_port_ipv4(config.port).await?;
         Ok(Self {
             container,
@@ -114,7 +114,7 @@ impl GolemBaseContainer {
         })
     }
 
-    /// Get the container URL that can be used with GolemBaseClient.
+    /// Get the container URL that can be used with ArkivClient.
     pub fn get_url(&self) -> Result<Url, anyhow::Error> {
         Ok(Url::parse(&format!(
             "http://localhost:{}",
@@ -145,7 +145,7 @@ impl GolemBaseContainer {
         self.stop().await?;
 
         // Initialize a new container with the same configuration
-        let new_container = Self::init_golembase(&self.config).await?;
+        let new_container = Self::init_arkiv(&self.config).await?;
         let new_mapped_port = new_container.get_host_port_ipv4(self.config.port).await?;
 
         // Update the container and mapped port
@@ -167,10 +167,8 @@ impl GolemBaseContainer {
         Ok(self.container.unpause().await?)
     }
 
-    /// Initialize the GolemBase container with the given configuration.
-    async fn init_golembase(
-        config: &Config,
-    ) -> Result<ContainerAsync<GenericImage>, anyhow::Error> {
+    /// Initialize the Arkiv container with the given configuration.
+    async fn init_arkiv(config: &Config) -> Result<ContainerAsync<GenericImage>, anyhow::Error> {
         let port = config.port;
         let timeout = config.timeout;
 
@@ -178,13 +176,13 @@ impl GolemBaseContainer {
             .with_wait_for(WaitFor::message_on_stderr("HTTP server started"))
             .with_mapped_port(port, ContainerPort::Tcp(port))
             .with_log_consumer(|line: &LogFrame| {
-                log::info!("[GolemBase]: {}", String::from_utf8_lossy(&line.bytes()))
+                log::info!("[Arkiv]: {}", String::from_utf8_lossy(&line.bytes()))
             })
             .with_cmd([
                 "--dev",
                 "--http",
                 "--http.api",
-                "eth,web3,net,debug,golembase",
+                "eth,web3,net,debug,golembas,arkiv",
                 "--verbosity",
                 "3",
                 "--http.addr",
@@ -213,10 +211,10 @@ impl GolemBaseContainer {
 
         let container = match tokio::time::timeout(timeout, container_future).await {
             Ok(Ok(container)) => container,
-            Ok(Err(e)) => return Err(anyhow::anyhow!("Failed to start GolemBase instance: {}", e)),
+            Ok(Err(e)) => return Err(anyhow::anyhow!("Failed to start Arkiv instance: {}", e)),
             Err(_) => {
                 return Err(anyhow::anyhow!(
-                    "Timeout ({}) starting GolemBase instance",
+                    "Timeout ({}) starting Arkiv instance",
                     humantime::format_duration(timeout)
                 ))
             }

@@ -7,10 +7,10 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::{broadcast, RwLock};
 
-use golem_base_sdk::account::GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS;
-use golem_base_sdk::events::{
-    golem_base_storage_entity_created, golem_base_storage_entity_deleted,
-    golem_base_storage_entity_updated,
+use arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
+use arkiv_sdk::events::{
+    arkiv_storage_entity_created, arkiv_storage_entity_deleted,
+    arkiv_storage_entity_updated,
 };
 
 use crate::{
@@ -328,8 +328,8 @@ impl EntityEventHandler for EventEmitter {
         let transaction_index = block.find_transaction_index(&transaction.hash).unwrap_or(0);
 
         let log_event = LogEvent {
-            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-            topic: golem_base_storage_entity_created(),
+            address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
+            topic: arkiv_storage_entity_created(),
             entity_id: entity.key,
             additional_data: None,
             block_number: block.header.block_number,
@@ -346,8 +346,8 @@ impl EntityEventHandler for EventEmitter {
         let transaction_index = block.find_transaction_index(&transaction.hash).unwrap_or(0);
 
         let log_event = LogEvent {
-            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-            topic: golem_base_storage_entity_updated(),
+            address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
+            topic: arkiv_storage_entity_updated(),
             entity_id: entity.key,
             additional_data: None,
             block_number: block.header.block_number,
@@ -364,8 +364,8 @@ impl EntityEventHandler for EventEmitter {
         let transaction_index = block.find_transaction_index(&transaction.hash).unwrap_or(0);
 
         let log_event = LogEvent {
-            address: GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
-            topic: golem_base_storage_entity_deleted(),
+            address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
+            topic: arkiv_storage_entity_deleted(),
             entity_id: entity.key,
             additional_data: None,
             block_number: block.header.block_number,

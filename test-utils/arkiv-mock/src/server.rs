@@ -3,24 +3,24 @@ use jsonrpsee::server::{RpcModule, ServerBuilder};
 use std::net::SocketAddr;
 use url::Url;
 
-use crate::api::{EthRpcServer, GolemBaseRpcServer};
+use crate::api::{ArkivRpcServer, EthRpcServer};
 use crate::controller::MockController;
 use crate::transaction_pool::TransactionPool;
-use crate::GolemBaseMock;
+use crate::ArkivMock;
 
-/// GolemBase Mock Server
+/// Arkiv Mock Server
 #[derive(Clone)]
-pub struct GolemBaseMockServer {
-    pub state: GolemBaseMock,
+pub struct ArkivMockServer {
+    pub state: ArkivMock,
     pub url: Url,
     #[allow(dead_code)]
     server: Option<jsonrpsee::server::ServerHandle>,
 }
 
-impl GolemBaseMockServer {
+impl ArkivMockServer {
     pub fn new() -> Self {
         Self {
-            state: GolemBaseMock::new(),
+            state: ArkivMock::new(),
             url: Url::parse("http://127.0.0.1:8585").unwrap(),
             server: None,
         }
@@ -60,7 +60,7 @@ impl GolemBaseMockServer {
         // Register RPC methods (both Ethereum and GolemBase)
         let rpc_impl = self.state.clone();
         module.merge(EthRpcServer::into_rpc(rpc_impl.clone()))?;
-        module.merge(GolemBaseRpcServer::into_rpc(rpc_impl))?;
+        module.merge(ArkivRpcServer::into_rpc(rpc_impl))?;
 
         let server = ServerBuilder::default().build(addr).await?;
 

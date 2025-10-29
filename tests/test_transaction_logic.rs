@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use alloy::primitives::U256;
-use golem_base_mock::{
+use arkiv_mock::{
     controller::{CallOverride, CallResponse},
-    GolemBaseMockServer,
+    ArkivMockServer,
 };
-use golem_base_sdk::{client::TransactionConfig, entity::Create, GolemBaseClient};
-use golem_base_test_utils::{
+use arkiv_sdk::{client::TransactionConfig, entity::Create, ArkivClient};
+use arkiv_test_utils::{
     create_test_account,
-    golembase::{Config, GolemBaseContainer},
+    arkiv::{Config, ArkivContainer},
     init_logger,
 };
 use serial_test::serial;
@@ -20,9 +20,9 @@ const NUM_ITERATIONS: usize = 50;
 async fn test_transaction_random_errors() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     let _callback = ctrl.global_override(CallOverride::Always(CallResponse::FailEachNth {
@@ -52,9 +52,9 @@ async fn test_transaction_random_errors() -> anyhow::Result<()> {
 async fn test_transaction_indexing_in_progress() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     let _callback = ctrl.override_rpc(
@@ -80,9 +80,9 @@ async fn test_transaction_indexing_in_progress() -> anyhow::Result<()> {
 async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     let create = Create::from_string("Hello, GolemBase!", 100);
@@ -115,9 +115,9 @@ async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
 async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     let create = Create::from_string("Hello, GolemBase!", 100);
@@ -139,7 +139,7 @@ async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
 
     // New client doesn't have previous nonce stored, so it will get the error.
     // This simulates scenario when application using the client is restarted.
-    let client2 = GolemBaseClient::new(mock.url().clone())?;
+    let client2 = ArkivClient::new(mock.url().clone())?;
     client2.account_load(account, "test123").await?;
 
     log::info!("Creating entity with nonce too low...");
@@ -155,8 +155,8 @@ async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
 async fn test_transaction_wait_for_confirmations() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(mock.url().clone())?.override_config(TransactionConfig {
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?.override_config(TransactionConfig {
         required_confirmations: 1,
         ..TransactionConfig::default()
     });
@@ -173,8 +173,8 @@ async fn test_transaction_wait_for_confirmations() -> anyhow::Result<()> {
 async fn test_transaction_rpc_pause() -> anyhow::Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default().with_port(33221)).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default().with_port(33221)).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
     let create = Create::from_string("Hello, GolemBase!", 100);
@@ -205,8 +205,8 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
     init_logger(false);
 
     let mut container =
-        GolemBaseContainer::new(Config::default().with_port(33221).preserve_volume()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+        ArkivContainer::new(Config::default().with_port(33221).preserve_volume()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
     let create = Create::from_string("Hello, GolemBase!", 100);
@@ -239,8 +239,8 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
 async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
     init_logger(false);
 
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
     let create = Create::from_string("Hello, GolemBase!", 100);
@@ -268,13 +268,13 @@ async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
 async fn test_transaction_wrong_chain_id() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::new()
+    let mock = ArkivMockServer::new()
         .with_chain_id(5555)
         .default_start()
         .await?;
 
     // Create client with a different chain ID (137 for Polygon)
-    let client = GolemBaseClient::new(mock.url().clone())?.override_config(TransactionConfig {
+    let client = ArkivClient::new(mock.url().clone())?.override_config(TransactionConfig {
         chain_id: Some(137), // Wrong chain ID - mock returns 5555, but we configure 137
         ..TransactionConfig::default()
     });
@@ -299,13 +299,13 @@ async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
     init_logger(false);
 
     // Create mock server with chain ID 5555
-    let mock = GolemBaseMockServer::new()
+    let mock = ArkivMockServer::new()
         .with_chain_id(5555)
         .default_start()
         .await?;
 
     // Create client with correct chain ID initially
-    let client = GolemBaseClient::new(mock.url().clone())?.override_config(TransactionConfig {
+    let client = ArkivClient::new(mock.url().clone())?.override_config(TransactionConfig {
         chain_id: Some(5555), // Correct chain ID initially
         ..TransactionConfig::default()
     });
@@ -340,8 +340,8 @@ async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
 async fn test_transaction_stacked_pending() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(mock.url().clone())?.override_config(TransactionConfig {
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?.override_config(TransactionConfig {
         required_confirmations: 1,
         pending_transaction_timeout: Duration::from_secs(3),
         transaction_receipt_timeout: Duration::from_secs(20),
@@ -372,8 +372,8 @@ async fn test_transaction_stacked_pending() -> anyhow::Result<()> {
 async fn test_transaction_stacked_pending_for_infinity() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(mock.url().clone())?.override_config(TransactionConfig {
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?.override_config(TransactionConfig {
         required_confirmations: 1,
         pending_transaction_timeout: Duration::from_secs(3),
         transaction_receipt_timeout: Duration::from_secs(17),

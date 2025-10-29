@@ -1,9 +1,9 @@
 use alloy::primitives::{keccak256, Address, B256};
 use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use arkiv_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
+use arkiv_sdk::rpc::{serialize_hex, SearchResult};
+use arkiv_sdk::rpc::{IncludeData, QueryOptions};
 use bytes::Bytes;
-use golem_base_sdk::entity::{Create, NumericAnnotation, StringAnnotation, Update};
-use golem_base_sdk::rpc::{serialize_base64, EntityMetaData, SearchResult};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::string::FromUtf8Error;
@@ -17,7 +17,7 @@ use crate::query_parser::{Expression, Parser, QueryCondition};
 pub struct Entity {
     #[serde(serialize_with = "serialize_b256")]
     pub key: B256,
-    #[serde(serialize_with = "serialize_base64")]
+    #[serde(serialize_with = "serialize_hex")]
     pub data: Bytes,
     pub btl: u64,
     #[serde(serialize_with = "serialize_address")]
@@ -88,6 +88,13 @@ impl Entity {
                     .find(|a| a.key == *key)
                     .map_or(false, |a| a.value == *value)
             }
+            QueryCondition::StringNotEquals(key, value) => {
+                // Check if the entity has this string annotation key with a different value
+                self.string_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(true, |a| a.value != *value)
+            }
             QueryCondition::NumericEquals(key, value) => {
                 // Check if the entity has this numeric annotation key with the specified value
                 self.numeric_annotations
@@ -95,27 +102,89 @@ impl Entity {
                     .find(|a| a.key == *key)
                     .map_or(false, |a| a.value == *value)
             }
+            QueryCondition::NumericNotEquals(key, value) => {
+                // Check if the entity has this numeric annotation key with a different value
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(true, |a| a.value != *value)
+            }
+            QueryCondition::NumericLessThan(key, value) => {
+                // Check if the entity has this numeric annotation key with a value less than specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value < *value)
+            }
+            QueryCondition::NumericGreaterThan(key, value) => {
+                // Check if the entity has this numeric annotation key with a value greater than specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value > *value)
+            }
+            QueryCondition::NumericLessThanOrEqual(key, value) => {
+                // Check if the entity has this numeric annotation key with a value less than or equal to specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value <= *value)
+            }
+            QueryCondition::NumericGreaterThanOrEqual(key, value) => {
+                // Check if the entity has this numeric annotation key with a value greater than or equal to specified
+                self.numeric_annotations
+                    .iter()
+                    .find(|a| a.key == *key)
+                    .map_or(false, |a| a.value >= *value)
+            }
             QueryCondition::OwnerEquals(value) => {
                 // Compare the entity's owner with the specified address
                 self.owner == *value
             }
+            QueryCondition::KeyEquals(value) => {
+                // Compare the entity's key with the specified key
+                self.key == *value
+            }
+            QueryCondition::ExpirationEquals(value) => {
+                // Compare the entity's expires_at with the specified block number
+                self.expires_at == Some(*value)
+            }
+        }
+    }
+
+    pub fn to_search_result(&self, options: &QueryOptions) -> SearchResult {
+        let include_data = options.clone().include_data.unwrap_or(IncludeData::all());
+
+        SearchResult {
+            key: match include_data.key {
+                true => self.key,
+                false => Default::default(),
+            },
+            value: match include_data.payload {
+                true => Some(self.data.clone()),
+                false => None,
+            },
+            expires_at: match include_data.expiration {
+                true => self.expires_at,
+                false => None,
+            },
+            owner: match include_data.owner {
+                true => Some(self.owner),
+                false => None,
+            },
+            string_annotations: match include_data.annotations {
+                true => self.string_annotations.clone(),
+                false => Vec::new(),
+            },
+            numeric_annotations: match include_data.annotations {
+                true => self.numeric_annotations.clone(),
+                false => Vec::new(),
+            },
         }
     }
 }
 
-impl From<&Entity> for EntityMetaData {
-    fn from(entity: &Entity) -> Self {
-        Self {
-            expires_at_block: entity.expires_at,
-            payload: Some(BASE64.encode(&entity.data)),
-            string_annotations: entity.string_annotations.clone(),
-            numeric_annotations: entity.numeric_annotations.clone(),
-            owner: entity.owner,
-        }
-    }
-}
-
-impl TryFrom<Entity> for golem_base_sdk::entity::Entity {
+impl TryFrom<Entity> for arkiv_sdk::entity::Entity {
     type Error = FromUtf8Error;
 
     fn try_from(local_entity: Entity) -> Result<Self, Self::Error> {
@@ -132,7 +201,11 @@ impl From<&Entity> for SearchResult {
     fn from(entity: &Entity) -> Self {
         Self {
             key: entity.key,
-            value: entity.data.clone(),
+            value: Some(entity.data.clone()),
+            expires_at: Some(entity.expires_at.unwrap_or(0)),
+            owner: Some(entity.owner),
+            string_annotations: entity.string_annotations.clone(),
+            numeric_annotations: entity.numeric_annotations.clone(),
         }
     }
 }
@@ -177,20 +250,34 @@ impl EntityDbState {
                     self.evaluate_expression(right).into_iter().collect();
                 left_keys.union(&right_keys).cloned().collect()
             }
+            Expression::Not(expr) => {
+                // Get all entity keys
+                let all_keys: HashSet<B256> = self.entities.keys().cloned().collect();
+                // Get keys that match the negated expression
+                let matching_keys: HashSet<B256> =
+                    self.evaluate_expression(expr).into_iter().collect();
+                // Return keys that are NOT in the matching set
+                all_keys.difference(&matching_keys).cloned().collect()
+            }
         }
     }
 
     /// Get candidate entity keys from annotation maps for a given condition
     fn get_candidates(&self, condition: &QueryCondition) -> Vec<B256> {
         match condition {
-            QueryCondition::StringEquals(key, _) => {
+            QueryCondition::StringEquals(key, _) | QueryCondition::StringNotEquals(key, _) => {
                 // Find entities that have this string annotation key
                 self.string_annotations
                     .get(key)
                     .cloned()
                     .unwrap_or_default()
             }
-            QueryCondition::NumericEquals(key, _) => {
+            QueryCondition::NumericEquals(key, _)
+            | QueryCondition::NumericNotEquals(key, _)
+            | QueryCondition::NumericLessThan(key, _)
+            | QueryCondition::NumericGreaterThan(key, _)
+            | QueryCondition::NumericLessThanOrEqual(key, _)
+            | QueryCondition::NumericGreaterThanOrEqual(key, _) => {
                 // Find entities that have this numeric annotation key
                 self.numeric_annotations
                     .get(key)
@@ -204,6 +291,26 @@ impl EntityDbState {
                     .cloned()
                     .unwrap_or_default()
             }
+            QueryCondition::KeyEquals(value) => {
+                // Find entity by key
+                if self.entities.contains_key(value) {
+                    vec![*value]
+                } else {
+                    vec![]
+                }
+            }
+            QueryCondition::ExpirationEquals(value) => {
+                // Find entities that expire at the specified block number
+                self.entities
+                    .values()
+                    .filter_map(|entity| {
+                        entity
+                            .expires_at
+                            .filter(|&expires_at| expires_at == *value)
+                            .map(|_| entity.key)
+                    })
+                    .collect()
+            }
         }
     }
 
@@ -214,6 +321,8 @@ impl EntityDbState {
         // Parse query string to extract conditions
         let expression =
             Parser::parse_query(query).map_err(|e| anyhow!("Failed to parse query: {}", e))?;
+
+        log::trace!("Parsed expression: {:?}", expression);
 
         // Evaluate the expression to get matching entity keys
         Ok(self.evaluate_expression(&expression))

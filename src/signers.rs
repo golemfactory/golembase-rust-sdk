@@ -22,7 +22,7 @@ pub trait TransactionSigner: Send + Sync {
     async fn sign(&self, data: &[u8]) -> anyhow::Result<Signature>;
 }
 
-const DEFAULT_KEYSTORE_DIR: &str = "golembase";
+const DEFAULT_KEYSTORE_DIR: &str = "arkiv";
 
 /// A signer that keeps the private key in memory and supports loading, saving, and listing keys.
 /// Useful for local development and testing, with support for keystore files and raw key files.
@@ -158,10 +158,10 @@ impl TransactionSigner for InMemorySigner {
     }
 }
 
-/// A signer that uses GolemBase as a remote signing backend.
+/// A signer that uses Arkiv as a remote signing backend.
 /// Intended for scenarios where signing is delegated to a node or service.
 #[allow(dead_code)]
-pub struct GolemBaseSigner {
+pub struct ArkivSigner {
     /// The address of the account as an `Address`.
     address: Address,
     /// The provider for signing, typically a remote node.
@@ -170,8 +170,8 @@ pub struct GolemBaseSigner {
     chain_id: u64,
 }
 
-impl GolemBaseSigner {
-    /// Creates a new `GolemBaseSigner` with the given address, provider, and chain ID.
+impl ArkivSigner {
+    /// Creates a new `ArkivSigner` with the given address, provider, and chain ID.
     pub fn new(address: Address, provider: ResilientProvider, chain_id: u64) -> Self {
         Self {
             address,
@@ -182,7 +182,7 @@ impl GolemBaseSigner {
 }
 
 #[async_trait]
-impl TransactionSigner for GolemBaseSigner {
+impl TransactionSigner for ArkivSigner {
     fn address(&self) -> Address {
         self.address
     }

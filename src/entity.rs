@@ -35,13 +35,13 @@ pub type StringAnnotation = Annotation<String>;
 /// Type alias for numeric annotations (key-value pairs with `u64` values).
 pub type NumericAnnotation = Annotation<u64>;
 
-/// A type alias for the hash used to identify entities in GolemBase.
+/// A type alias for the hash used to identify entities in Arkiv.
 pub type Hash = B256;
 
 /// Type alias for the key used in annotations.
 pub type Key = String;
 
-/// Type representing a create transaction in GolemBase.
+/// Type representing a create transaction in Arkiv.
 /// Used to define new entities, including their data, BTL, and annotations.
 #[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable, Deserialize)]
 #[rlp(trailing)]
@@ -56,7 +56,7 @@ pub struct Create {
     pub numeric_annotations: Vec<NumericAnnotation>,
 }
 
-/// Type representing an update transaction in GolemBase.
+/// Type representing an update transaction in Arkiv.
 /// Used to update existing entities, including their data, BTL, and annotations.
 #[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable, Deserialize)]
 #[rlp(trailing)]
@@ -74,9 +74,9 @@ pub struct Update {
 }
 
 /// Type alias for a delete operation (just the entity key).
-pub type GolemBaseDelete = Hash;
+pub type ArkivDelete = Hash;
 
-/// Type representing an extend transaction in GolemBase.
+/// Type representing an extend transaction in Arkiv.
 /// Used to extend the BTL of an entity by a number of blocks.
 #[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable, Deserialize)]
 pub struct Extend {
@@ -86,16 +86,16 @@ pub struct Extend {
     pub number_of_blocks: u64,
 }
 
-/// Type representing a transaction in GolemBase, including creates, updates, deletes, and extensions.
+/// Type representing a transaction in Arkiv, including creates, updates, deletes, and extensions.
 /// Used as the main payload for submitting entity changes to the chain.
 #[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable)]
-pub struct GolemBaseTransaction {
+pub struct ArkivTransaction {
     /// A list of entities to create.
     pub creates: Vec<Create>,
     /// A list of entities to update.
     pub updates: Vec<Update>,
     /// A list of entity keys to delete.
-    pub deletes: Vec<GolemBaseDelete>,
+    pub deletes: Vec<ArkivDelete>,
     /// A list of entities to extend.
     pub extensions: Vec<Extend>,
 }
@@ -232,7 +232,7 @@ impl Update {
     }
 }
 
-impl GolemBaseTransaction {
+impl ArkivTransaction {
     /// Returns the RLP-encoded bytes of the transaction.
     /// Useful for submitting the transaction to the chain.
     pub fn encoded(&self) -> Vec<u8> {
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_empty_transaction() {
-        let tx = GolemBaseTransaction::default();
+        let tx = ArkivTransaction::default();
         assert_eq!(hex::encode(tx.encoded()), "c4c0c0c0c0");
     }
 
@@ -259,7 +259,7 @@ mod tests {
     fn test_create_without_annotations() {
         let create = Create::new(b"test payload".to_vec(), 1000);
 
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.creates.push(create);
 
         assert_eq!(
@@ -274,7 +274,7 @@ mod tests {
             .annotate_string("foo", "bar")
             .annotate_number("baz", 42);
 
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.creates.push(create);
 
         assert_eq!(
@@ -293,7 +293,7 @@ mod tests {
         .annotate_string("status", "active")
         .annotate_number("version", 2);
 
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.updates.push(update);
 
         assert_eq!(
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_delete_operation() {
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.deletes.push(B256::from_slice(&[2; 32]));
 
         assert_eq!(
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_extend_btl() {
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.extensions.push(Extend {
             entity_key: B256::from_slice(&[3; 32]),
             number_of_blocks: 500,
@@ -335,7 +335,7 @@ mod tests {
             b"updated payload".to_vec(),
             2000,
         );
-        let mut tx = GolemBaseTransaction::default();
+        let mut tx = ArkivTransaction::default();
         tx.creates.push(create);
         tx.updates.push(update);
         tx.deletes.push(B256::from_slice(&[2; 32]));

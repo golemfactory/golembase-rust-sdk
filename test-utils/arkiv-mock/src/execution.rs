@@ -6,7 +6,7 @@ use crate::transaction_pool::TransactionPool;
 use alloy::primitives::{B256, U256};
 use alloy::rlp::Encodable;
 use alloy::rpc::types::TransactionRequest;
-use golem_base_sdk::account::GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS;
+use arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -174,7 +174,7 @@ impl ExecutionEngine {
         let transaction_request = TransactionRequest {
             from: Some(signer_address),
             to: Some(alloy::primitives::TxKind::Call(
-                GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
+                ARKIV_STORAGE_PROCESSOR_ADDRESS,
             )),
             value: Some(U256::ZERO),
             gas: Some(0),

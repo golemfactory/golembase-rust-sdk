@@ -1,14 +1,14 @@
 use anyhow::Result;
 use futures::StreamExt;
-use golem_base_sdk::GolemBaseClient;
+use arkiv_sdk::ArkivClient;
 use serial_test::serial;
 use std::time::Duration;
 
-use golem_base_sdk::entity::{Create, Update};
-use golem_base_sdk::events::Event;
-use golem_base_test_utils::{
+use arkiv_sdk::entity::{Create, Update};
+use arkiv_sdk::events::Event;
+use arkiv_test_utils::{
     cleanup_entities, create_test_account,
-    golembase::{Config, GolemBaseContainer},
+    arkiv::{Config, ArkivContainer},
     init_logger, TEST_TTL,
 };
 
@@ -17,11 +17,11 @@ use golem_base_test_utils::{
 async fn test_event_listening() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
-    cleanup_entities(&client, account).await?;
+    cleanup_entities(&client, account).await.unwrap();
 
     // Start listening for events, before we create the entity to avoid missing the event.
     let events = client.events_client().await.unwrap();
@@ -76,9 +76,9 @@ async fn test_event_listening() -> Result<()> {
 async fn test_event_listening_with_timeout() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
     cleanup_entities(&client, account).await.unwrap();
 

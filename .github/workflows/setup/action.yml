@@ -13,8 +13,8 @@ runs:
     - name: Run a gb-op-geth container
       run: >
         docker run -d -p 8545:8545 -e GITHUB_ACTIONS=true -e CI=true
-        quay.io/golemnetwork/gb-op-geth:latest --dev --http --http.api
-        'eth,web3,net,debug,golembase' --verbosity 3 --http.addr '0.0.0.0' --http.port 8545
+        golemnetwork/golembase-op-geth:latest --dev --http --http.api
+        'eth,web3,net,debug,golembase,arkiv' --verbosity 3 --http.addr '0.0.0.0' --http.port 8545
         --http.corsdomain '*' --http.vhosts '*' --ws --ws.addr '0.0.0.0' --ws.port 8545
       shell: bash
 

@@ -8,9 +8,9 @@ use serial_test::serial;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use golem_base_sdk::{client::GolemBaseClient, entity::Create, signers::TransactionSigner};
-use golem_base_test_utils::{
-    golembase::{Config, GolemBaseContainer},
+use arkiv_sdk::{client::ArkivClient, entity::Create, signers::TransactionSigner};
+use arkiv_test_utils::{
+    arkiv::{Config, ArkivContainer},
     init_logger, TEST_TTL,
 };
 
@@ -58,9 +58,9 @@ impl TransactionSigner for LocalTaskSigner {
 async fn test_custom_signer_with_spawn_local() -> Result<()> {
     init_logger(false);
 
-    // Start GolemBase container
-    let container = GolemBaseContainer::new(Config::default()).await?;
-    let client = GolemBaseClient::new(container.get_url()?)?;
+    // Start Arkiv container
+    let container = ArkivContainer::new(Config::default()).await?;
+    let client = ArkivClient::new(container.get_url()?)?;
 
     // Create a custom signer
     let inner_signer = PrivateKeySigner::random();

@@ -2,19 +2,19 @@ use std::time::Duration;
 
 use bigdecimal::BigDecimal;
 use futures::StreamExt;
-use golem_base_mock::{
+use arkiv_mock::{
     controller::{CallOverride, CallResponse, CallbackResult},
-    GolemBaseMockServer,
+    ArkivMockServer,
 };
-use golem_base_sdk::{
+use arkiv_sdk::{
     entity::{Create, Update},
     events::Event,
-    GolemBaseClient,
+    ArkivClient,
 };
-use golem_base_test_utils::{create_test_account, init_logger, TEST_TTL};
+use arkiv_test_utils::{create_test_account, init_logger, TEST_TTL};
 use serial_test::serial;
 
-/// Comprehensive integration test that demonstrates using the GolemBase mock server with GolemBaseClient
+/// Comprehensive integration test that demonstrates using the Arkiv mock server with ArkivClient
 #[tokio::test]
 #[serial]
 async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
@@ -22,8 +22,8 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
 
     // Test 1: Basic functionality with default mock server
     log::info!("Testing basic functionality with default mock server...");
-    let server = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(server.url().clone())?;
+    let server = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(server.url().clone())?;
 
     // Are we able to get the chain id?
     let chain_id = client.get_chain_id().await?;
@@ -40,7 +40,7 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     // Test basic entity creation
     log::info!("Creating test entity...");
 
-    let test_data = b"Hello, GolemBase!";
+    let test_data = b"Hello, Arkiv!";
     let create = Create::new(test_data.to_vec(), 100)
         .annotate_string("test_type", "Test")
         .annotate_number("test_timestamp", 1234567890);
@@ -63,7 +63,10 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     );
     assert_eq!(test_type_results.len(), 1);
     assert_eq!(test_type_results[0].key, result);
-    assert_eq!(test_type_results[0].value, test_data.as_slice());
+    assert_eq!(
+        test_type_results[0].value.clone().unwrap(),
+        test_data.as_slice()
+    );
 
     log::info!("Querying entities by numeric annotation 'test_timestamp = 1234567890'...");
     let timestamp_results = client
@@ -88,11 +91,11 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     log::info!("Getting entity metadata...");
     let metadata = client.get_entity_metadata(result).await.unwrap();
     log::info!("Entity metadata: {:?}", metadata);
-    assert_eq!(metadata.owner, account);
+    assert_eq!(metadata.owner.unwrap(), account);
     assert_eq!(metadata.string_annotations.len(), 1);
     assert_eq!(metadata.numeric_annotations.len(), 1);
 
-    log::info!("✅ All GolemBase mock tests completed successfully!");
+    log::info!("✅ All Arkiv mock tests completed successfully!");
     Ok(())
 }
 
@@ -102,9 +105,9 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
 async fn test_golem_base_mock_once_callback_waiting() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
     let ctrl = mock.controller();
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
     log::info!("Create callbacks first to be sure that they will be triggered in correct order");
@@ -151,8 +154,8 @@ async fn test_golem_base_mock_once_callback_waiting() -> anyhow::Result<()> {
 async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await?;
 
     // Start listening for events, before we create the entity to avoid missing the event.
@@ -208,8 +211,8 @@ async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
 async fn test_golem_base_mock_expiration() -> anyhow::Result<()> {
     init_logger(false);
 
-    let mock = GolemBaseMockServer::create_test_mock_server().await?;
-    let client = GolemBaseClient::new(mock.url().clone())?;
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await?;
 
     let events = client.events_client().await.unwrap();

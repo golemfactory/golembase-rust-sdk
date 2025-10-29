@@ -1,5 +1,5 @@
 [package]
-name = "golem-base-test-utils"
+name = "arkiv-test-utils"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,5 +15,5 @@ testcontainers = "0.24"
 tokio = { version = "1.0", features = ["time"] }
 url = "2"
 
-golem-base-sdk = { workspace = true }
-golem-base-mock = { workspace = true }
+arkiv-sdk = { workspace = true }
+arkiv-mock = { workspace = true }

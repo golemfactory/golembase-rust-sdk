@@ -1,9 +1,9 @@
 [package]
-name = "golem-base-sdk-cli"
+name = "arkiv-sdk-cli"
 version = "0.1.0"
 edition = "2021"
-authors = ["Golem Factory"]
-description = "CLI tool for interacting with Golem Base"
+authors = ["Arkiv Team"]
+description = "CLI tool for interacting with Arkiv"
 
 [dependencies]
 anyhow = "1.0"
@@ -11,7 +11,7 @@ bigdecimal = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 dirs = "5.0"
 env_logger = "0.11"
-golem-base-sdk = { workspace = true }
+arkiv-sdk = { workspace = true }
 log = "0.4"
 thiserror = "1.0"
 tokio = { version = "1.0", features = ["full"] }

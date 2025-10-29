@@ -38,6 +38,10 @@ jobs:
         uses: ./.github/workflows/setup
 
       - name: Run tests
+        env:
+          RUST_TEST_THREADS: 1
+          TEST_ENABLE_ALL_LOGS_OVERRIDE: true
+          RUST_LOG: debug
         run: cargo test --workspace -- --test-threads=1
 
       - name: Build docs

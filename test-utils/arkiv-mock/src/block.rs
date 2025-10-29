@@ -65,7 +65,7 @@ impl TransactionLog {
     ) -> Self {
         Self {
             transaction_hash: transaction.hash,
-            address: golem_base_sdk::account::GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS,
+            address: arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS,
             topics: vec![event_signature, entity_key],
             data: Bytes::from(entity_key.as_slice().to_vec()),
         }

@@ -7,9 +7,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 
-use golem_base_sdk::account::GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS;
-use golem_base_sdk::entity::GolemBaseTransaction;
-use golem_base_sdk::utils::wei_to_eth;
+use arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
+use arkiv_sdk::entity::ArkivTransaction;
+use arkiv_sdk::utils::wei_to_eth;
 
 use crate::block::{Block, Transaction};
 use crate::block_builder::BlockBuilder;
@@ -122,7 +122,7 @@ impl Blockchain {
         block_builder: &mut BlockBuilder,
     ) -> anyhow::Result<()> {
         // Validate this is a housekeeping transaction
-        if transaction.to != GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS {
+        if transaction.to != ARKIV_STORAGE_PROCESSOR_ADDRESS {
             anyhow::bail!("Transaction is not sent to housekeeping processor address");
         }
 
@@ -246,16 +246,16 @@ impl Blockchain {
         builder: &mut BlockBuilder,
     ) -> anyhow::Result<()> {
         // Check if transaction is to the GolemBase storage processor contract
-        if transaction.to != GOLEM_BASE_STORAGE_PROCESSOR_ADDRESS {
+        if transaction.to != ARKIV_STORAGE_PROCESSOR_ADDRESS {
             return Ok(());
         }
 
-        // Try to decode the transaction data as a GolemBaseTransaction
+        // Try to decode the transaction data as an ArkivTransaction
         // This is the inverse of the encoding shown in send_db_transaction
-        match GolemBaseTransaction::decode(&mut transaction.data.as_ref()) {
-            Ok(golem_tx) => {
+        match ArkivTransaction::decode(&mut transaction.data.as_ref()) {
+            Ok(arkiv_tx) => {
                 // Process creates
-                for (idx, create) in golem_tx.creates.into_iter().enumerate() {
+                for (idx, create) in arkiv_tx.creates.into_iter().enumerate() {
                     let entity = Entity::create(create, transaction.from).with_hash(
                         builder.block.header.block_number,
                         idx,
@@ -268,7 +268,7 @@ impl Blockchain {
                 }
 
                 // Process updates
-                for update in &golem_tx.updates {
+                for update in &arkiv_tx.updates {
                     let entity_key = update.entity_key;
 
                     // Update the entity directly in the database
@@ -281,7 +281,7 @@ impl Blockchain {
                 }
 
                 // Process extensions
-                for extend in &golem_tx.extensions {
+                for extend in &arkiv_tx.extensions {
                     let entity_key = extend.entity_key;
                     let number_of_blocks = extend.number_of_blocks;
 
@@ -295,7 +295,7 @@ impl Blockchain {
                 }
 
                 // Process deletes
-                for delete in &golem_tx.deletes {
+                for delete in &arkiv_tx.deletes {
                     let key = *delete;
                     if let Some(entity) = self.entity_db.remove_entity(&key).await {
                         // Add log and emit event

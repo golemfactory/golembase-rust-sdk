@@ -8,15 +8,13 @@ use alloy::rpc::types::{
     Block, BlockId, BlockNumberOrTag, Filter, Log, Transaction, TransactionReceipt,
     TransactionRequest,
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use golem_base_sdk::entity::Entity;
-use golem_base_sdk::rpc::{EntityMetaData, SearchResult};
+use arkiv_sdk::rpc::{QueryOptions, QueryResponse, SearchResult};
 use jsonrpsee::core::{async_trait, RpcResult, StringError, SubscriptionResult};
 use jsonrpsee::types::{ErrorCode, ErrorObject};
 use jsonrpsee::{PendingSubscriptionSink, SubscriptionMessage};
 use std::sync::Arc;
 
-use crate::api::{EthRpcServer, GolemBaseRpcServer};
+use crate::api::{ArkivRpcServer, EthRpcServer};
 use crate::block::Transaction as InternalTransaction;
 use crate::blockchain::Blockchain;
 use crate::controller::{should_fail, CallOverride, CallResponse, MockController, WithCallback};
@@ -41,7 +39,7 @@ pub mod server;
 pub mod transaction_pool;
 
 // Re-export symbols for user of the library.
-pub use server::GolemBaseMockServer;
+pub use server::ArkivMockServer;
 
 /// Helper function to create ErrorObject with a typed ErrorCode and message
 pub fn create_error(code: ErrorCode, message: impl Into<String>) -> ErrorObject<'static> {
@@ -50,6 +48,10 @@ pub fn create_error(code: ErrorCode, message: impl Into<String>) -> ErrorObject<
 
 pub fn invalid_param(message: impl Into<String>) -> ErrorObject<'static> {
     create_error(ErrorCode::InvalidParams, message)
+}
+
+pub fn internal_error(message: impl Into<String>) -> ErrorObject<'static> {
+    create_error(ErrorCode::InternalError, message)
 }
 
 /// Macro to handle RPC overrides with custom response support.
@@ -89,7 +91,7 @@ macro_rules! return_override {
 
 /// Mock implementation of RPC methods (both Ethereum and GolemBase)
 #[derive(Clone)]
-pub struct GolemBaseMock {
+pub struct ArkivMock {
     blockchain: Blockchain,
     entity_db: EntityDb,
     transaction_pool: TransactionPool,
@@ -99,7 +101,7 @@ pub struct GolemBaseMock {
     event_emitter: Arc<EventEmitter>,
 }
 
-impl GolemBaseMock {
+impl ArkivMock {
     pub fn new() -> Self {
         let entity_db = EntityDb::new();
         let events = Arc::new(EventEmitter::new());
@@ -134,11 +136,11 @@ impl GolemBaseMock {
     ///
     /// Note that this function must be used in very specific way to work correctly:
     /// ```
-    /// # use golem_base_mock::{GolemBaseMock, return_override};
+    /// # use arkiv_mock::{ArkivMock, return_override};
     /// # use jsonrpsee::core::RpcResult;
     ///
     /// fn main() -> RpcResult<()> {
-    ///     let mock = GolemBaseMock::new();
+    ///     let mock = ArkivMock::new();
     ///
     ///     let _override = mock.next_override("eth_getTransactionCount")?;
     ///     return_override!(_override, ());
@@ -186,7 +188,7 @@ impl GolemBaseMock {
 }
 
 #[async_trait]
-impl EthRpcServer for GolemBaseMock {
+impl EthRpcServer for ArkivMock {
     async fn get_transaction_count(
         &self,
         address: Address,
@@ -633,107 +635,46 @@ impl EthRpcServer for GolemBaseMock {
 }
 
 #[async_trait]
-impl GolemBaseRpcServer for GolemBaseMock {
-    async fn get_entity(&self, key: B256) -> RpcResult<Option<Entity>> {
-        let _override = self.next_override("golem_getEntity")?;
-        return_override!(_override, Option<Entity>);
-
-        Ok(self
-            .entity_db
-            .get_entity(&key)
-            .await
-            .map(|local_entity| {
-                local_entity.try_into().map_err(|e| {
-                    create_error(
-                        ErrorCode::InternalError,
-                        format!("Failed to convert entity data to UTF-8: {}", e),
-                    )
-                })
-            })
-            .transpose()?)
-    }
-
-    async fn get_entity_metadata(&self, key: B256) -> RpcResult<EntityMetaData> {
-        let _override = self.next_override("golem_getEntityMetadata")?;
-        return_override!(_override, EntityMetaData);
-
-        Ok(self
-            .entity_db
-            .get_entity(&key)
-            .await
-            .map(|entity| EntityMetaData::from(&entity))
-            .ok_or_else(|| {
-                create_error(ErrorCode::InvalidParams, format!("entity {key} not found"))
-            })?)
-    }
-
+impl ArkivRpcServer for ArkivMock {
     async fn get_entity_count(&self) -> RpcResult<u64> {
-        let _override = self.next_override("golem_getEntityCount")?;
+        let _override = self.next_override("arkiv_getEntityCount")?;
         return_override!(_override, u64);
         Ok(self.entity_db.count().await as u64)
     }
 
-    async fn get_all_entity_keys(&self) -> RpcResult<Option<Vec<B256>>> {
-        let _override = self.next_override("golem_getAllEntityKeys")?;
-        return_override!(_override, Option<Vec<B256>>);
-        Ok(Some(self.entity_db.get_all_keys().await))
-    }
-
-    async fn get_entities_of_owner(&self, address: Address) -> RpcResult<Option<Vec<B256>>> {
-        let _override = self.next_override("golem_getEntitiesOfOwner")?;
-        return_override!(_override, Option<Vec<B256>>);
-        // Use the owner index to efficiently get entities by owner
-        let keys = self.entity_db.get_entities_by_owner(&address).await;
-        Ok(Some(keys))
-    }
-
-    async fn get_storage_value(&self, key: B256) -> RpcResult<String> {
-        let _override = self.next_override("golem_getStorageValue")?;
-        return_override!(_override, String);
-        if let Some(entity) = self.entity_db.get_entity(&key).await {
-            let encoded = BASE64.encode(&entity.data);
-            Ok(encoded)
-        } else {
-            Err(create_error(
-                ErrorCode::InvalidParams,
-                format!("Entity not found for key: 0x{:x}", key),
-            ))
-        }
-    }
-
-    async fn query_entities(&self, query: String) -> RpcResult<Vec<SearchResult>> {
-        let _override = self.next_override("golem_queryEntities")?;
-        return_override!(_override, Vec<SearchResult>);
-        let entities = self.entity_db.query_entities(&query).await.map_err(|e| {
-            create_error(
-                ErrorCode::InvalidParams,
-                format!("Query parsing failed: {}", e),
-            )
-        })?;
+    async fn query(&self, query: String, options: QueryOptions) -> RpcResult<QueryResponse> {
+        let _override = self.next_override("arkiv_query")?;
+        return_override!(_override, QueryResponse);
+        let entities = self
+            .entity_db
+            .query_entities(&query)
+            .await
+            .map_err(|e| invalid_param(format!("Query parsing failed: {}", e)))?;
 
         let results: Vec<SearchResult> = entities
             .into_iter()
-            .map(|entity| SearchResult {
-                key: entity.key,
-                value: entity.data,
-            })
+            .map(|entity| entity.to_search_result(&options))
             .collect();
-        Ok(results)
-    }
 
-    async fn get_entities_to_expire_at_block(
-        &self,
-        _block_number: u64,
-    ) -> RpcResult<Option<Vec<B256>>> {
-        let _override = self.next_override("golem_getEntitiesToExpireAtBlock")?;
-        return_override!(_override, Option<Vec<B256>>);
-        // For now, return empty list since the EntityDb doesn't track expiration blocks
-        // In a real implementation, you'd want to add an expiration index to the EntityDb
-        Ok(Some(vec![]))
+        let block_number = self
+            .blockchain
+            .get_latest_block_number()
+            .await
+            .map_err(|e| internal_error(format!("Error getting block number: {e}")))?;
+
+        let response = QueryResponse {
+            data: results,
+            block_number: block_number,
+            // No pagination in mock implementation
+            cursor: None,
+        };
+
+        log::trace!("Query response: {:?}", response);
+        Ok(response)
     }
 }
 
-impl GolemBaseMock {
+impl ArkivMock {
     /// Creates a new account with a random private key
     pub fn create_account(&self) -> Address {
         self.managed_accounts.create_account()

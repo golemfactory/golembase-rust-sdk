@@ -1,12 +1,12 @@
 [package]
-name = "golem-base-sdk"
+name = "arkiv-sdk"
 version = "0.1.0"
 edition = "2021"
-description = "A Rust SDK for interacting with GolemBase."
+description = "A Rust SDK for interacting with Arkiv."
 license = "GPLv3"
 
 [workspace]
-members = ["api", "cli", "demo", "test-utils", "test-utils/golem-base-mock"]
+members = ["api", "cli", "demo", "test-utils", "test-utils/arkiv-mock"]
 resolver = "2"
 
 [dependencies]
@@ -16,7 +16,6 @@ alloy-rlp = "0.3"
 alloy-signer-local = { version = "0.15", features = ["keystore"] }
 anyhow = "1.0"
 async-trait = "0.1"
-base64 = "0.22"
 bigdecimal = "0.4"
 bon = "3.6"
 bytes = "1.0"
@@ -29,14 +28,15 @@ humantime = "2.2"
 log = "0.4"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 thiserror = "2.0"
 tokio = { version = "1.0", features = ["full"] }
 url = "2.4"
 
 [workspace.dependencies]
-golem-base-sdk = { path = "." }
-golem-base-test-utils = { path = "test-utils" }
-golem-base-mock = { path = "test-utils/golem-base-mock" }
+arkiv-sdk = { path = "." }
+arkiv-test-utils = { path = "test-utils" }
+arkiv-mock = { path = "test-utils/arkiv-mock" }
 
 [dev-dependencies]
 clap = { version = "4.4", features = ["derive"] }
@@ -44,5 +44,5 @@ env_logger = "0.10"
 serde_json = "1.0"
 serial_test = "3.2"
 
-golem-base-test-utils = { workspace = true }
-golem-base-mock = { workspace = true }
+arkiv-test-utils = { workspace = true }
+arkiv-mock = { workspace = true }

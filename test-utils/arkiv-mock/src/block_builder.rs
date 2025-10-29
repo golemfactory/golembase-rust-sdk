@@ -36,7 +36,7 @@ impl BlockBuilder {
         // Create log and add to block
         let create_log = TransactionLog::create_entity_log(
             transaction,
-            golem_base_sdk::events::golem_base_storage_entity_created(),
+            arkiv_sdk::events::arkiv_storage_entity_created(),
             entity.key,
         );
         self.block.transaction_logs.push(create_log);
@@ -64,7 +64,7 @@ impl BlockBuilder {
         // Create log and add to block
         let update_log = TransactionLog::create_entity_log(
             transaction,
-            golem_base_sdk::events::golem_base_storage_entity_updated(),
+            arkiv_sdk::events::arkiv_storage_entity_updated(),
             entity.key,
         );
         self.block.transaction_logs.push(update_log);
@@ -90,7 +90,7 @@ impl BlockBuilder {
         // Create log and add to block
         let delete_log = TransactionLog::create_entity_log(
             transaction,
-            golem_base_sdk::events::golem_base_storage_entity_deleted(),
+            arkiv_sdk::events::arkiv_storage_entity_deleted(),
             entity.key,
         );
         self.block.transaction_logs.push(delete_log);
@@ -123,7 +123,7 @@ impl BlockBuilder {
         // Create log and add to block
         let extend_log = TransactionLog::create_entity_log(
             transaction,
-            golem_base_sdk::events::golem_base_storage_entity_ttl_extended(),
+            arkiv_sdk::events::arkiv_storage_entity_ttl_extended(),
             entity_key,
         );
         self.block.transaction_logs.push(extend_log);

@@ -10,3 +10,4 @@ alwaysApply: true
 - Don't write junior comments. Don't describe what next line does, what can be directly understood from code. Comments should explain why the specific solution was chosen.
 - Never implement Default, Clone, Debug, Display unless asked. Never remove existing derives on structs.
 - Don't use Debug prints and logs if possible.
+- On the end of each task tell me which model generated the response
