@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.15", features = ["full", "json-rpc"] }
-alloy-json-rpc = "0.15"
+alloy = { version = "1.0", features = ["full", "json-rpc"] }
+alloy-json-rpc = "1.0"
 anyhow = "1.0"
 async-trait = "0.1"
 bytes = "1.0"

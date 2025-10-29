@@ -9,11 +9,11 @@ use arkiv_sdk::events::{
 pub struct DisplayEnabler<'a, Type>(pub &'a Type);
 
 pub trait EnableDisplay<Type> {
-    fn display(&self) -> DisplayEnabler<Type>;
+    fn display(&self) -> DisplayEnabler<'_, Type>;
 }
 
 impl<Type> EnableDisplay<Type> for Type {
-    fn display(&self) -> DisplayEnabler<Type> {
+    fn display(&self) -> DisplayEnabler<'_, Type> {
         DisplayEnabler(self)
     }
 }

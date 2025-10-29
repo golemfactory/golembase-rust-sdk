@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.15", features = ["full", "json-rpc"] }
+alloy = { version = "1.0", features = ["full", "json-rpc"] }
 anyhow = "1.0"
 bigdecimal = "0.4"
 env_logger = "0.10"
