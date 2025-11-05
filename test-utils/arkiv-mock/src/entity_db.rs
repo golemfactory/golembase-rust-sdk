@@ -580,6 +580,18 @@ impl EntityDb {
             })
             .collect()
     }
+
+    /// Clear all entities from the database
+    pub async fn clear_all(&self) -> usize {
+        let mut state = self.state.write().await;
+        let count = state.entities.len();
+        state.entities.clear();
+        state.string_annotations.clear();
+        state.numeric_annotations.clear();
+        state.entities_by_owner.clear();
+        log::info!("Cleared all {} entities from database", count);
+        count
+    }
 }
 
 /// Serialize B256 as hex string with 0x prefix

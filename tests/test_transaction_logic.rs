@@ -7,9 +7,8 @@ use arkiv_mock::{
 };
 use arkiv_sdk::{client::TransactionConfig, entity::Create, ArkivClient};
 use arkiv_test_utils::{
-    create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger,
+    arkiv::{ArkivContainer, Config},
+    create_test_account, init_logger,
 };
 use serial_test::serial;
 
@@ -396,6 +395,32 @@ async fn test_transaction_stacked_pending_for_infinity() -> anyhow::Result<()> {
     let result = client.create_entry(account, create).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("pending"));
+
+    Ok(())
+}
+
+/// This can happen if Arkiv chain is re-deployed. All transactions, blocks and funds will disappear.
+/// Nonce will be reset to 0. We need to ensure, that we can still create transactions after nonce is reset.
+#[tokio::test]
+#[serial]
+async fn test_transaction_nonce_reset() -> anyhow::Result<()> {
+    init_logger(false);
+
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
+    let account = create_test_account(&client).await.unwrap();
+
+    let create = Create::from_string("E1", 100);
+    let result = client.create_entry(account, create).await.unwrap();
+    log::info!("Created first entity {result}...");
+
+    log::info!("Resetting blockchain to genesis to reset nonce to 0");
+    mock.reset_blockchain_to_genesis().await;
+
+    log::info!("Second transaction should succeed with nonce reset to 0.");
+    let create = Create::from_string("E2", 100);
+    let result = client.create_entry(account, create).await.unwrap();
+    log::info!("Created second entity {result}...");
 
     Ok(())
 }

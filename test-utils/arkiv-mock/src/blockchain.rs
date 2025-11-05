@@ -484,4 +484,49 @@ impl Blockchain {
 
         self.add_block(genesis_block).await;
     }
+
+    /// Reset blockchain to genesis state: clear all blocks except genesis, clear transactions, reset account nonces
+    /// Preserves account balances and account existence
+    pub async fn reset_to_genesis(&self) {
+        let mut state = self.state.write().await;
+
+        // Get genesis block if it exists
+        let genesis_block = state.blocks_by_number.get(&0).cloned();
+
+        // Clear all blocks
+        let blocks_cleared = state.blocks_by_number.len();
+        state.blocks_by_number.clear();
+        state.blocks_by_hash.clear();
+
+        // Clear all transactions
+        let transactions_cleared = state.transactions.len();
+        state.transactions.clear();
+
+        // Reset all account nonces and transaction lists, but preserve balances
+        let accounts_reset = state.accounts.len();
+        for account in state.accounts.values_mut() {
+            account.nonce = U256::ZERO;
+            account.transactions.clear();
+            account.received_transactions.clear();
+        }
+
+        // Restore genesis block if it existed
+        if let Some(genesis) = genesis_block {
+            let block_number = genesis.header.block_number;
+            let block_hash = genesis.header.block_hash;
+            state.blocks_by_number.insert(block_number, genesis.clone());
+            state.blocks_by_hash.insert(block_hash, genesis);
+        } else {
+            // Create new genesis block if none existed
+            drop(state);
+            self.create_genesis_block().await;
+        }
+
+        log::info!(
+            "Reset blockchain to genesis: {} blocks cleared, {} transactions cleared, {} accounts reset",
+            blocks_cleared,
+            transactions_cleared,
+            accounts_reset
+        );
+    }
 }
