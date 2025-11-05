@@ -172,11 +172,11 @@ impl Entity {
                 true => Some(self.owner),
                 false => None,
             },
-            string_annotations: match include_data.annotations {
+            string_annotations: match include_data.attributes {
                 true => self.string_annotations.clone(),
                 false => Vec::new(),
             },
-            numeric_annotations: match include_data.annotations {
+            numeric_annotations: match include_data.attributes {
                 true => self.numeric_annotations.clone(),
                 false => Vec::new(),
             },

@@ -464,5 +464,25 @@ async fn test_handle_external_transaction() -> anyhow::Result<()> {
     let result2 = client.create_entry(account, create2).await.unwrap();
     log::info!("Created second entity {result2}...");
 
+    log::info!("Creating multiple external transactions in a row");
+    for i in 1..=3 {
+        let external_create = Create::from_string(&format!("External{}", i), 100);
+        let external_result = external_client
+            .create_entry(account, external_create)
+            .await
+            .unwrap();
+        log::info!("Sent external transaction #{}: {}", i, external_result);
+    }
+
+    log::info!("Waiting for external transactions to be mined...");
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    log::info!(
+        "Creating third entity with SDK - should discover all external transactions and adjust nonce"
+    );
+    let create3 = Create::from_string("E3", 100);
+    let result3 = client.create_entry(account, create3).await.unwrap();
+    log::info!("Created third entity {result3}...");
+
     Ok(())
 }

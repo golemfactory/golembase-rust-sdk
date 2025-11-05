@@ -88,8 +88,8 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         assert_eq!(entry_str, format!("task1_entity_{}", i));
 
         let metadata = client.get_entity_metadata(result.entity_key).await?;
-        assert_string_annotation(&metadata, "task", "task1");
-        assert_numeric_annotation(&metadata, "index", i as u64);
+        assert_string_annotation(&metadata, "task", "task1").unwrap();
+        assert_numeric_annotation(&metadata, "index", i as u64).unwrap();
     }
 
     for (i, result) in task2_entities.iter().enumerate() {
@@ -97,8 +97,8 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         assert_eq!(entry_str, format!("task2_entity_{}", i));
 
         let metadata = client.get_entity_metadata(result.entity_key).await?;
-        assert_string_annotation(&metadata, "task", "task2");
-        assert_numeric_annotation(&metadata, "index", i as u64);
+        assert_string_annotation(&metadata, "task", "task2").unwrap();
+        assert_numeric_annotation(&metadata, "index", i as u64).unwrap();
     }
 
     log::info!(

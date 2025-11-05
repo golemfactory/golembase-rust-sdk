@@ -70,8 +70,9 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
         assert_eq!(entry_str, format!("task1_entity_{}", i));
 
         let metadata = client.get_entity_metadata(*entity_id).await?;
-        assert_string_annotation(&metadata, "task", "task1");
-        assert_numeric_annotation(&metadata, "index", i as u64);
+        log::info!("Metadata: {metadata:?}");
+        assert_string_annotation(&metadata, "task", "task1").unwrap();
+        assert_numeric_annotation(&metadata, "index", i as u64).unwrap();
     }
 
     for (i, entity_id) in task2_entity_ids.iter().enumerate() {
@@ -79,8 +80,8 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
         assert_eq!(entry_str, format!("task2_entity_{}", i));
 
         let metadata = client.get_entity_metadata(*entity_id).await?;
-        assert_string_annotation(&metadata, "task", "task2");
-        assert_numeric_annotation(&metadata, "index", i as u64);
+        assert_string_annotation(&metadata, "task", "task2").unwrap();
+        assert_numeric_annotation(&metadata, "index", i as u64).unwrap();
     }
 
     log::info!(
@@ -125,8 +126,8 @@ async fn test_batch_entity_creation() -> Result<()> {
 
         // Verify metadata
         let metadata = client.get_entity_metadata(*entity_id).await?;
-        assert_string_annotation(&metadata, "batch", "test");
-        assert_numeric_annotation(&metadata, "index", i as u64);
+        assert_string_annotation(&metadata, "batch", "test").unwrap();
+        assert_numeric_annotation(&metadata, "index", i as u64).unwrap();
         assert_eq!(metadata.owner.unwrap(), account);
     }
 

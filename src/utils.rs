@@ -25,29 +25,45 @@ pub fn wei_to_eth(wei: U256) -> BigDecimal {
 }
 
 /// Asserts that a string annotation with the given key exists and has the expected value.
-/// Panics if the annotation is not found or has a different value.
-pub fn assert_string_annotation(metadata: &SearchResult, key: &str, expected_value: &str) {
+/// Returns an error if the annotation is not found or has a different value.
+pub fn assert_string_annotation(
+    metadata: &SearchResult,
+    key: &str,
+    expected_value: &str,
+) -> anyhow::Result<()> {
     let annotation = metadata
         .find_string_annotation(key)
-        .unwrap_or_else(|| panic!("String annotation with key '{}' not found", key));
-    assert_eq!(
-        annotation.value, expected_value,
-        "String annotation '{}' has unexpected value",
-        key
-    );
+        .ok_or_else(|| anyhow::anyhow!("String annotation with key '{}' not found", key))?;
+    if annotation.value != expected_value {
+        anyhow::bail!(
+            "String annotation '{}' has unexpected value: expected '{}', found '{}'",
+            key,
+            expected_value,
+            annotation.value
+        );
+    }
+    Ok(())
 }
 
 /// Asserts that a numeric annotation with the given key exists and has the expected value.
-/// Panics if the annotation is not found or has a different value.
-pub fn assert_numeric_annotation(metadata: &SearchResult, key: &str, expected_value: u64) {
+/// Returns an error if the annotation is not found or has a different value.
+pub fn assert_numeric_annotation(
+    metadata: &SearchResult,
+    key: &str,
+    expected_value: u64,
+) -> anyhow::Result<()> {
     let annotation = metadata
         .find_numeric_annotation(key)
-        .unwrap_or_else(|| panic!("Numeric annotation with key '{}' not found", key));
-    assert_eq!(
-        annotation.value, expected_value,
-        "Numeric annotation '{}' has unexpected value",
-        key
-    );
+        .ok_or_else(|| anyhow::anyhow!("Numeric annotation with key '{}' not found", key))?;
+    if annotation.value != expected_value {
+        anyhow::bail!(
+            "Numeric annotation '{}' has unexpected value: expected {}, found {}",
+            key,
+            expected_value,
+            annotation.value
+        );
+    }
+    Ok(())
 }
 
 /// Filters out built-in annotations (those starting with '$') from string annotations.

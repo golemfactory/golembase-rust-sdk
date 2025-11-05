@@ -346,12 +346,12 @@ async fn test_get_entity_metadata() -> Result<()> {
     assert_eq!(metadata.owner.unwrap(), account);
 
     // Verify string annotations
-    assert_string_annotation(&metadata, "type", "metadata_test");
-    assert_string_annotation(&metadata, "category", "test");
+    assert_string_annotation(&metadata, "type", "metadata_test").unwrap();
+    assert_string_annotation(&metadata, "category", "test").unwrap();
 
     // Verify numeric annotations
-    assert_numeric_annotation(&metadata, "priority", 5);
-    assert_numeric_annotation(&metadata, "version", 10);
+    assert_numeric_annotation(&metadata, "priority", 5).unwrap();
+    assert_numeric_annotation(&metadata, "version", 10).unwrap();
 
     // Test getting metadata for non-existent entity
     let non_existent_id = Hash::from([0u8; 32]);

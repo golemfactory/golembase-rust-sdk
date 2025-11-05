@@ -45,8 +45,8 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
     let metadata = client.get_entity_metadata(entry_id).await?;
     log::info!("Retrieved metadata for entry 0x{entry_id:x}: {metadata:?}");
 
-    assert_string_annotation(&metadata, "test_type", "Test");
-    assert_numeric_annotation(&metadata, "test_timestamp", timestamp);
+    assert_string_annotation(&metadata, "test_type", "Test").unwrap();
+    assert_numeric_annotation(&metadata, "test_timestamp", timestamp).unwrap();
     assert_eq!(metadata.owner.unwrap(), account);
     // Entry should be created in start_block + 1.
     assert_eq!(metadata.expires_at.unwrap(), start_block + 1000);
