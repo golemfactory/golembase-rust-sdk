@@ -5,6 +5,7 @@ use arkiv_mock::{
     controller::{CallOverride, CallResponse},
     ArkivMockServer,
 };
+use arkiv_sdk::signers::InMemorySigner;
 use arkiv_sdk::{client::TransactionConfig, entity::Create, ArkivClient};
 use arkiv_test_utils::{
     arkiv::{ArkivContainer, Config},
@@ -421,6 +422,47 @@ async fn test_transaction_nonce_reset() -> anyhow::Result<()> {
     let create = Create::from_string("E2", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created second entity {result}...");
+
+    Ok(())
+}
+
+/// Test scenario where a transaction is created externally (outside of SDK).
+/// SDK should discover this transaction and handle it properly by adjusting its nonce tracking.
+#[tokio::test]
+#[serial]
+async fn test_handle_external_transaction() -> anyhow::Result<()> {
+    init_logger(false);
+
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
+    let account = create_test_account(&client).await.unwrap();
+
+    log::info!("Creating first entity with SDK");
+    let create1 = Create::from_string("E1", 100);
+    let result1 = client.create_entry(account, create1).await.unwrap();
+    log::info!("Created first entity {result1}...");
+
+    log::info!("Creating external transaction (simulating transaction from another client)");
+    let external_signer = InMemorySigner::load_by_address(account, "test123")?;
+    let external_client = ArkivClient::new(mock.url().clone())?;
+    external_client.account_register(external_signer).await?;
+
+    let external_create = Create::from_string("External", 100);
+    let external_result = external_client
+        .create_entry(account, external_create)
+        .await
+        .unwrap();
+    log::info!("Sent external transaction {external_result}");
+
+    log::info!("Waiting for external transaction to be mined...");
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    log::info!(
+        "Creating second entity with SDK - should discover external transaction and adjust nonce"
+    );
+    let create2 = Create::from_string("E2", 100);
+    let result2 = client.create_entry(account, create2).await.unwrap();
+    log::info!("Created second entity {result2}...");
 
     Ok(())
 }
