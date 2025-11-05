@@ -9,6 +9,7 @@ use arkiv_test_utils::entity_set::{
 };
 use arkiv_test_utils::init_logger;
 use futures::StreamExt;
+use serial_test::serial;
 
 /// Test scenarios for pagination functionality using query_streamed
 ///
@@ -28,6 +29,7 @@ fn high_gas_config() -> TransactionConfig {
 /// - Verify no duplicates and no missing entities
 /// - Verify cursor-based pagination works correctly
 #[tokio::test]
+#[serial]
 async fn test_basic_pagination_small_pages() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -50,6 +52,7 @@ async fn test_basic_pagination_small_pages() -> anyhow::Result<()> {
 /// - Verify all entities are returned in a single page
 /// - Verify cursor is None when all results fit in one page
 #[tokio::test]
+#[serial]
 async fn test_large_pages_small_dataset() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -73,6 +76,7 @@ async fn test_large_pages_small_dataset() -> anyhow::Result<()> {
 /// - Verify consistent ordering across pages
 /// - Verify memory usage remains reasonable
 #[tokio::test]
+#[serial]
 async fn test_large_dataset_medium_pages() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -96,6 +100,7 @@ async fn test_large_dataset_medium_pages() -> anyhow::Result<()> {
 /// - Verify pagination works correctly regardless of entity size
 /// - Verify large entities don't break pagination logic
 #[tokio::test]
+#[serial]
 async fn test_large_entity_sizes() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -120,6 +125,7 @@ async fn test_large_entity_sizes() -> anyhow::Result<()> {
 /// - Verify only matching entities are returned
 /// - Verify pagination works correctly with filtered results
 #[tokio::test]
+#[serial]
 async fn test_filtered_queries_pagination() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -155,6 +161,7 @@ async fn test_filtered_queries_pagination() -> anyhow::Result<()> {
 /// - Verify each stream returns complete, non-overlapping results
 /// - Verify no race conditions or data corruption
 #[tokio::test]
+#[serial]
 async fn test_concurrent_pagination_streams() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -195,6 +202,7 @@ async fn test_concurrent_pagination_streams() -> anyhow::Result<()> {
 /// - Verify results continue from correct position
 /// - Verify no duplicate or missing entities
 #[tokio::test]
+#[serial]
 async fn test_cursor_persistence_resumption() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -229,6 +237,7 @@ async fn test_cursor_persistence_resumption() -> anyhow::Result<()> {
 /// - Test with page size larger than total count
 /// - Verify correct behavior in all boundary cases
 #[tokio::test]
+#[serial]
 async fn test_boundary_conditions() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;
@@ -270,6 +279,7 @@ async fn test_boundary_conditions() -> anyhow::Result<()> {
 /// - Verify large entities don't break pagination
 /// - Verify all entities are returned regardless of size
 #[tokio::test]
+#[serial]
 async fn test_mixed_entity_sizes() -> anyhow::Result<()> {
     init_logger(false);
     let arkiv = ArkivContainer::new(Default::default()).await?;

@@ -60,8 +60,18 @@ impl NonceInfo {
         }
 
         if let Some(last_used) = self.last_used_nonce {
-            if (last_used + 1) != self.next_pending_nonce {
+            if (last_used + 1) < self.next_pending_nonce {
                 log::warn!("Last used nonce is not equal to next pending nonce. Probably transaction was sent externally.");
+            } else if (last_used + 1) > self.next_pending_nonce {
+                if self.next_pending_nonce == 0 {
+                    // If DB-chain was re-deployed, we need to reset nonce to 0.
+                    log::warn!(
+                        "Last used nonce was reset to 0. Probably DB-chain was re-deployed."
+                    );
+                    return 0;
+                } else {
+                    log::error!("Next pending nonce is less than last used nonce, but not 0. This should not happen!");
+                }
             }
         }
 
