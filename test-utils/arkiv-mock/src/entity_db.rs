@@ -172,11 +172,11 @@ impl Entity {
                 true => Some(self.owner),
                 false => None,
             },
-            string_annotations: match include_data.annotations {
+            string_annotations: match include_data.attributes {
                 true => self.string_annotations.clone(),
                 false => Vec::new(),
             },
-            numeric_annotations: match include_data.annotations {
+            numeric_annotations: match include_data.attributes {
                 true => self.numeric_annotations.clone(),
                 false => Vec::new(),
             },
@@ -579,6 +579,18 @@ impl EntityDb {
                     .map(|_| entity.key)
             })
             .collect()
+    }
+
+    /// Clear all entities from the database
+    pub async fn clear_all(&self) -> usize {
+        let mut state = self.state.write().await;
+        let count = state.entities.len();
+        state.entities.clear();
+        state.string_annotations.clear();
+        state.numeric_annotations.clear();
+        state.entities_by_owner.clear();
+        log::info!("Cleared all {} entities from database", count);
+        count
     }
 }
 

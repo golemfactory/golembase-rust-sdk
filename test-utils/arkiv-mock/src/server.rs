@@ -125,4 +125,14 @@ impl ArkivMockServer {
         let server = self.start(socket_addr).await?;
         Ok(server)
     }
+
+    /// Reset blockchain to genesis state: clears all blocks (except genesis), transactions, entities, and resets account nonces
+    /// Account balances are preserved. This simulates a blockchain re-deployment.
+    pub async fn reset_blockchain_to_genesis(&self) {
+        self.state.transaction_pool.clear_all().await;
+        self.state.blockchain.reset_to_genesis().await;
+        self.state.entity_db.clear_all().await;
+
+        log::info!("Reset blockchain to genesis");
+    }
 }

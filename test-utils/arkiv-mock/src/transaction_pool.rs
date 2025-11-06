@@ -175,4 +175,13 @@ impl TransactionPool {
         // Return the actual transaction object
         self.get_transaction(hash).await
     }
+
+    /// Clear all transactions from the pool
+    pub async fn clear_all(&self) -> usize {
+        let mut state = self.state.write().await;
+        let count = state.transactions.len();
+        state.transactions.clear();
+        log::info!("Cleared all {} transactions from pool", count);
+        count
+    }
 }

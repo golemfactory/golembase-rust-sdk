@@ -146,6 +146,12 @@ impl InMemorySigner {
     }
 }
 
+impl From<PrivateKeySigner> for InMemorySigner {
+    fn from(signer: PrivateKeySigner) -> Self {
+        Self { signer }
+    }
+}
+
 #[async_trait]
 impl TransactionSigner for InMemorySigner {
     fn address(&self) -> Address {

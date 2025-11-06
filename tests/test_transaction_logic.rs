@@ -5,11 +5,11 @@ use arkiv_mock::{
     controller::{CallOverride, CallResponse},
     ArkivMockServer,
 };
+use arkiv_sdk::signers::InMemorySigner;
 use arkiv_sdk::{client::TransactionConfig, entity::Create, ArkivClient};
 use arkiv_test_utils::{
-    create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger,
+    arkiv::{ArkivContainer, Config},
+    create_test_account, init_logger,
 };
 use serial_test::serial;
 
@@ -396,6 +396,93 @@ async fn test_transaction_stacked_pending_for_infinity() -> anyhow::Result<()> {
     let result = client.create_entry(account, create).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("pending"));
+
+    Ok(())
+}
+
+/// This can happen if Arkiv chain is re-deployed. All transactions, blocks and funds will disappear.
+/// Nonce will be reset to 0. We need to ensure, that we can still create transactions after nonce is reset.
+#[tokio::test]
+#[serial]
+async fn test_transaction_nonce_reset() -> anyhow::Result<()> {
+    init_logger(false);
+
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
+    let account = create_test_account(&client).await.unwrap();
+
+    let create = Create::from_string("E1", 100);
+    let result = client.create_entry(account, create).await.unwrap();
+    log::info!("Created first entity {result}...");
+
+    log::info!("Resetting blockchain to genesis to reset nonce to 0");
+    mock.reset_blockchain_to_genesis().await;
+
+    log::info!("Second transaction should succeed with nonce reset to 0.");
+    let create = Create::from_string("E2", 100);
+    let result = client.create_entry(account, create).await.unwrap();
+    log::info!("Created second entity {result}...");
+
+    Ok(())
+}
+
+/// Test scenario where a transaction is created externally (outside of SDK).
+/// SDK should discover this transaction and handle it properly by adjusting its nonce tracking.
+#[tokio::test]
+#[serial]
+async fn test_handle_external_transaction() -> anyhow::Result<()> {
+    init_logger(false);
+
+    let mock = ArkivMockServer::create_test_mock_server().await?;
+    let client = ArkivClient::new(mock.url().clone())?;
+    let account = create_test_account(&client).await.unwrap();
+
+    log::info!("Creating first entity with SDK");
+    let create1 = Create::from_string("E1", 100);
+    let result1 = client.create_entry(account, create1).await.unwrap();
+    log::info!("Created first entity {result1}...");
+
+    log::info!("Creating external transaction (simulating transaction from another client)");
+    let external_signer = InMemorySigner::load_by_address(account, "test123")?;
+    let external_client = ArkivClient::new(mock.url().clone())?;
+    external_client.account_register(external_signer).await?;
+
+    let external_create = Create::from_string("External", 100);
+    let external_result = external_client
+        .create_entry(account, external_create)
+        .await
+        .unwrap();
+    log::info!("Sent external transaction {external_result}");
+
+    log::info!("Waiting for external transaction to be mined...");
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    log::info!(
+        "Creating second entity with SDK - should discover external transaction and adjust nonce"
+    );
+    let create2 = Create::from_string("E2", 100);
+    let result2 = client.create_entry(account, create2).await.unwrap();
+    log::info!("Created second entity {result2}...");
+
+    log::info!("Creating multiple external transactions in a row");
+    for i in 1..=3 {
+        let external_create = Create::from_string(&format!("External{}", i), 100);
+        let external_result = external_client
+            .create_entry(account, external_create)
+            .await
+            .unwrap();
+        log::info!("Sent external transaction #{}: {}", i, external_result);
+    }
+
+    log::info!("Waiting for external transactions to be mined...");
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    log::info!(
+        "Creating third entity with SDK - should discover all external transactions and adjust nonce"
+    );
+    let create3 = Create::from_string("E3", 100);
+    let result3 = client.create_entry(account, create3).await.unwrap();
+    log::info!("Created third entity {result3}...");
 
     Ok(())
 }

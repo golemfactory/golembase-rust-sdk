@@ -46,17 +46,28 @@ pub struct SearchResult {
     #[serde(rename = "owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<Address>,
     #[serde(
-        rename = "stringAnnotations",
+        rename = "stringAttributes",
         skip_serializing_if = "Vec::is_empty",
         default
     )]
     pub string_annotations: Vec<StringAnnotation>,
     #[serde(
-        rename = "numericAnnotations",
+        rename = "numericAttributes",
         skip_serializing_if = "Vec::is_empty",
         default
     )]
     pub numeric_annotations: Vec<NumericAnnotation>,
+}
+
+/// Specifies how to order query results.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderByAnnotation {
+    /// The annotation key to order by
+    #[serde(rename = "key")]
+    pub key: String,
+    /// Whether to order in ascending order (true) or descending order (false)
+    #[serde(rename = "ascending")]
+    pub ascending: bool,
 }
 
 /// Controls what data to include in query results.
@@ -65,18 +76,30 @@ pub struct IncludeData {
     /// Include the key field
     #[serde(rename = "key")]
     pub key: bool,
-    /// Include annotations (string and numeric)
-    #[serde(rename = "annotations")]
-    pub annotations: bool,
+    /// Include attributes (string and numeric annotations)
+    #[serde(rename = "attributes")]
+    pub attributes: bool,
     /// Include the payload data
     #[serde(rename = "payload")]
     pub payload: bool,
+    /// Include content type information
+    #[serde(rename = "contentType")]
+    pub content_type: bool,
     /// Include expiration information
     #[serde(rename = "expiration")]
     pub expiration: bool,
     /// Include owner information
     #[serde(rename = "owner")]
     pub owner: bool,
+    /// Include last modified at block information
+    #[serde(rename = "lastModifiedAtBlock")]
+    pub last_modified_at_block: bool,
+    /// Include transaction index in block information
+    #[serde(rename = "transactionIndexInBlock")]
+    pub transaction_index_in_block: bool,
+    /// Include operation index in transaction information
+    #[serde(rename = "operationIndexInTransaction")]
+    pub operation_index_in_transaction: bool,
 }
 
 /// Response structure for query operations.
@@ -116,6 +139,9 @@ pub struct QueryOptions {
     /// Controls what data to include in the results.
     #[serde(rename = "includeData", skip_serializing_if = "Option::is_none")]
     pub include_data: Option<IncludeData>,
+    /// Ordering specification for query results.
+    #[serde(rename = "orderBy", skip_serializing_if = "Vec::is_empty", default)]
+    pub order_by: Vec<OrderByAnnotation>,
     /// Maximum number of results per page.
     #[serde(rename = "resultsPerPage")]
     pub results_per_page: u64,
@@ -135,10 +161,14 @@ impl IncludeData {
     pub fn all() -> Self {
         Self {
             key: true,
-            annotations: true,
+            attributes: true,
             payload: true,
+            content_type: true,
             expiration: true,
             owner: true,
+            last_modified_at_block: true,
+            transaction_index_in_block: true,
+            operation_index_in_transaction: true,
         }
     }
 
@@ -146,10 +176,14 @@ impl IncludeData {
     pub fn keys_only() -> Self {
         Self {
             key: true,
-            annotations: false,
+            attributes: false,
             payload: false,
+            content_type: false,
             expiration: false,
             owner: false,
+            last_modified_at_block: false,
+            transaction_index_in_block: false,
+            operation_index_in_transaction: false,
         }
     }
 
@@ -157,10 +191,14 @@ impl IncludeData {
     pub fn metadata_only() -> Self {
         Self {
             key: true,
-            annotations: true,
+            attributes: true,
             payload: false,
+            content_type: true,
             expiration: true,
             owner: true,
+            last_modified_at_block: true,
+            transaction_index_in_block: true,
+            operation_index_in_transaction: true,
         }
     }
 }
@@ -176,16 +214,18 @@ impl QueryOptions {
         Self {
             at_block: None,
             include_data: Some(IncludeData::keys_only()),
+            order_by: Vec::new(),
             results_per_page: crate::client::DEFAULT_RESULTS_PER_PAGE,
             cursor: None,
         }
     }
 
-    /// Creates a `QueryOptions` with all columns selected and annotations enabled.
+    /// Creates a `QueryOptions` with all columns selected and attributes enabled.
     pub fn with_all() -> Self {
         Self {
             at_block: None,
             include_data: Some(IncludeData::all()),
+            order_by: Vec::new(),
             results_per_page: crate::client::DEFAULT_RESULTS_PER_PAGE,
             cursor: None,
         }
@@ -203,11 +243,17 @@ impl QueryOptions {
         self
     }
 
-    /// Sets whether to include annotations in query results.
+    /// Sets whether to include attributes (annotations) in query results.
     pub fn with_annotations(mut self, include_annotations: bool) -> Self {
         if let Some(ref mut data) = self.include_data {
-            data.annotations = include_annotations;
+            data.attributes = include_annotations;
         }
+        self
+    }
+
+    /// Sets the ordering for query results.
+    pub fn order_by(mut self, order_by: Vec<OrderByAnnotation>) -> Self {
+        self.order_by = order_by;
         self
     }
 
