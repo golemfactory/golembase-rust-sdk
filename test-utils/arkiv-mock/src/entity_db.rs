@@ -164,12 +164,30 @@ impl Entity {
                 true => Some(self.data.clone()),
                 false => None,
             },
+            content_type: match include_data.content_type {
+                true => Some("application/octet-stream".to_string()),
+                false => None,
+            },
             expires_at: match include_data.expiration {
                 true => self.expires_at,
                 false => None,
             },
             owner: match include_data.owner {
                 true => Some(self.owner),
+                false => None,
+            },
+            last_modified_at_block: match include_data.last_modified_at_block {
+                true => self
+                    .expires_at
+                    .map(|expires| expires.saturating_sub(self.btl)),
+                false => None,
+            },
+            transaction_index_in_block: match include_data.transaction_index_in_block {
+                true => None,
+                false => None,
+            },
+            operation_index_in_transaction: match include_data.operation_index_in_transaction {
+                true => None,
                 false => None,
             },
             string_annotations: match include_data.attributes {
@@ -202,8 +220,14 @@ impl From<&Entity> for SearchResult {
         Self {
             key: entity.key,
             value: Some(entity.data.clone()),
+            content_type: Some("application/octet-stream".to_string()),
             expires_at: Some(entity.expires_at.unwrap_or(0)),
             owner: Some(entity.owner),
+            last_modified_at_block: entity
+                .expires_at
+                .map(|expires| expires.saturating_sub(entity.btl)),
+            transaction_index_in_block: None,
+            operation_index_in_transaction: None,
             string_annotations: entity.string_annotations.clone(),
             numeric_annotations: entity.numeric_annotations.clone(),
         }
