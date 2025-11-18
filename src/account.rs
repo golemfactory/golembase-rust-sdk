@@ -89,7 +89,7 @@ impl NonceInfo {
 /// The address of the Arkiv storage processor contract.
 /// All storage-related transactions are sent to this contract address.
 pub const ARKIV_STORAGE_PROCESSOR_ADDRESS: Address =
-    address!("0x0000000000000000000000000000000060138453");
+    address!("0x00000000000000000000000000000061726B6976");
 
 /// Response type for queued transactions.
 /// Used internally for passing transaction results through channels.
@@ -132,7 +132,7 @@ struct TransactionQueue {
 /// Event signature for extending BTL (block time to live) of an entity.
 /// Used to identify `ArkivStorageEntityBTLExtended` events in logs.
 pub fn arkiv_storage_entity_btl_extended() -> B256 {
-    keccak256(b"ArkivStorageEntityBTLExtended(uint256,uint256)")
+    keccak256(b"ArkivEntityBTLExtended(uint256,address,uint256,uint256,uint256)")
 }
 
 impl TransactionQueue {

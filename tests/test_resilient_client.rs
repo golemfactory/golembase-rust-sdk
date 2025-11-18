@@ -1,12 +1,12 @@
 use std::time::{Duration, Instant};
 
-use bigdecimal::BigDecimal;
 use arkiv_mock::{
     controller::{CallOverride, CallResponse},
     ArkivMockServer,
 };
 use arkiv_sdk::ArkivClient;
 use arkiv_test_utils::{create_test_account, init_logger};
+use bigdecimal::BigDecimal;
 use serial_test::serial;
 
 /// Test validates proper handling of `error sending request` error.

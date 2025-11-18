@@ -10,7 +10,7 @@ use tokio::sync::Mutex;
 
 use arkiv_sdk::{client::ArkivClient, entity::Create, signers::TransactionSigner};
 use arkiv_test_utils::{
-    arkiv::{Config, ArkivContainer},
+    arkiv::{ArkivContainer, Config},
     init_logger, TEST_TTL,
 };
 

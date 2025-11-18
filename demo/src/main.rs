@@ -1,6 +1,6 @@
-use dirs::config_dir;
 use arkiv_sdk::entity::{Create, EntityResult, Update};
 use arkiv_sdk::{Address, Annotation, ArkivClient, Hash, PrivateKeySigner, Url};
+use dirs::config_dir;
 use log::info;
 use std::fs;
 
@@ -25,10 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer = PrivateKeySigner::from_bytes(&private_key)
         .map_err(|e| format!("Failed to parse private key: {}", e))?;
     let url = Url::parse("http://localhost:8545").unwrap();
-    let client = ArkivClient::builder()
-        .wallet(signer)
-        .rpc_url(url)
-        .build();
+    let client = ArkivClient::builder().wallet(signer).rpc_url(url).build();
 
     info!("Fetching owner address...");
     let owner_address = client.get_owner_address();

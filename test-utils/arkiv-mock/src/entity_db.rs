@@ -415,16 +415,24 @@ impl EntityDb {
     }
 
     /// Update an existing entity in the database with new data
-    /// Returns true if entity was updated, false if entity doesn't exist
-    pub async fn update_entity(&self, entity_key: &B256, update: &Update) -> bool {
+    /// Returns the updated entity if present
+    pub async fn update_entity(
+        &self,
+        entity_key: &B256,
+        update: &Update,
+        current_block: u64,
+    ) -> Option<Entity> {
         let mut state = self.state.write().await;
 
         if let Some(entity) = state.entities.get_mut(entity_key) {
             log::info!("Updating entity: key={}", entity_key);
             // Update the entity using the existing update method
             entity.update(update);
+            let new_expiration = current_block.saturating_add(entity.btl);
+            entity.expires_at = Some(new_expiration);
 
             // Get entity data to avoid borrowing conflicts
+            let entity = entity.clone();
             let entity_key = entity.key;
             let new_string_annotations = entity.string_annotations.clone();
             let new_numeric_annotations = entity.numeric_annotations.clone();
@@ -437,19 +445,29 @@ impl EntityDb {
                 &new_numeric_annotations,
             );
 
-            true
+            Some(entity.clone())
         } else {
             // Entity doesn't exist, ignore the update
-            false
+            None
         }
     }
 
     /// Update only the BTL of an existing entity
-    pub async fn update_entity_btl(&self, entity_key: &B256, new_btl: u64) {
+    pub async fn update_entity_btl(
+        &self,
+        entity_key: &B256,
+        number_of_blocks: u64,
+    ) -> Option<Entity> {
         let mut state = self.state.write().await;
 
         if let Some(entity) = state.entities.get_mut(entity_key) {
-            entity.btl = new_btl;
+            let old_expiration = entity.expires_at.unwrap_or(0);
+            let new_expiration = old_expiration.saturating_add(number_of_blocks);
+            entity.expires_at = Some(new_expiration);
+            entity.btl = entity.btl.saturating_add(number_of_blocks);
+            Some(entity.clone())
+        } else {
+            None
         }
     }
 

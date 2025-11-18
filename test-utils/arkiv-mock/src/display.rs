@@ -36,12 +36,10 @@ where
 /// Otherwise, returns the hash as a string.
 pub fn display_topic(topic: &B256) -> String {
     match *topic {
-        t if t == arkiv_storage_entity_created() => "GolemBaseStorageEntityCreated".to_string(),
-        t if t == arkiv_storage_entity_deleted() => "GolemBaseStorageEntityDeleted".to_string(),
-        t if t == arkiv_storage_entity_updated() => "GolemBaseStorageEntityUpdated".to_string(),
-        t if t == arkiv_storage_entity_ttl_extended() => {
-            "GolemBaseStorageEntityTTLExptended".to_string()
-        }
+        t if t == arkiv_storage_entity_created() => "ArkivEntityCreated".to_string(),
+        t if t == arkiv_storage_entity_deleted() => "ArkivEntityDeleted".to_string(),
+        t if t == arkiv_storage_entity_updated() => "ArkivEntityUpdated".to_string(),
+        t if t == arkiv_storage_entity_ttl_extended() => "ArkivEntityBTLExtended".to_string(),
         _ => format!("{topic}"),
     }
 }

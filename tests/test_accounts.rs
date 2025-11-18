@@ -1,9 +1,9 @@
 use anyhow::Result;
-use bigdecimal::BigDecimal;
 use arkiv_test_utils::{
-    arkiv::{Config, ArkivContainer},
+    arkiv::{ArkivContainer, Config},
     init_logger,
 };
+use bigdecimal::BigDecimal;
 use serial_test::serial;
 use std::fs;
 

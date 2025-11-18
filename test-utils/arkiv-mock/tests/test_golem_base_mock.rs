@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use bigdecimal::BigDecimal;
-use futures::StreamExt;
 use arkiv_mock::{
     controller::{CallOverride, CallResponse, CallbackResult},
     ArkivMockServer,
@@ -12,6 +10,8 @@ use arkiv_sdk::{
     ArkivClient,
 };
 use arkiv_test_utils::{create_test_account, init_logger, TEST_TTL};
+use bigdecimal::BigDecimal;
+use futures::StreamExt;
 use serial_test::serial;
 
 /// Comprehensive integration test that demonstrates using the Arkiv mock server with ArkivClient

@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
-use bigdecimal::BigDecimal;
 use arkiv_sdk::client::ArkivClient;
 use arkiv_sdk::entity::Create;
+use bigdecimal::BigDecimal;
 
 /// Simple program to connect to a Geth node
 #[derive(Parser, Debug)]

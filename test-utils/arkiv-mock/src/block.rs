@@ -12,6 +12,8 @@ use alloy::signers::local::PrivateKeySigner;
 use anyhow::{anyhow, Result};
 use std::sync::Arc;
 
+use crate::events::LogEvent;
+
 /// Represents a transaction log entry
 #[derive(Clone, Debug)]
 pub struct TransactionLog {
@@ -59,16 +61,18 @@ pub struct Block {
 
 impl TransactionLog {
     /// Create a new entity log entry
-    pub fn create_entity_log(
+    pub fn new_entity_log(
         transaction: &Arc<Transaction>,
         event_signature: B256,
         entity_key: B256,
+        owner: Address,
+        data: Bytes,
     ) -> Self {
         Self {
             transaction_hash: transaction.hash,
             address: arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS,
-            topics: vec![event_signature, entity_key],
-            data: Bytes::from(entity_key.as_slice().to_vec()),
+            topics: vec![event_signature, entity_key, LogEvent::encode_address(owner)],
+            data,
         }
     }
 
