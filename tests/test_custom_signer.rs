@@ -72,7 +72,7 @@ async fn test_custom_signer_with_spawn_local() -> Result<()> {
     log::info!("Registered custom signer account: {account}");
 
     // Create a test entity
-    let entry = Create::from_string("test payload from custom signer", TEST_TTL)
+    let entry = Create::text("test payload from custom signer", TEST_TTL)
         .annotate_string("test_type", "CustomSignerTest");
 
     let entry_id = client.create_entry(account, entry).await?;

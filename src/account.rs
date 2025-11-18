@@ -5,11 +5,11 @@ use alloy::consensus::{
 };
 use alloy::hex;
 use alloy::network::TransactionBuilder;
-use alloy::primitives::{address, keccak256, Address, B256, U256};
+use alloy::primitives::{address, Address, U256};
 use alloy::providers::PendingTransactionConfig;
 use alloy::rpc::types::eth::TransactionRequest;
 use alloy::rpc::types::TransactionReceipt;
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::Decodable;
 use anyhow::{anyhow, bail, Result};
 use bigdecimal::BigDecimal;
 use std::sync::{Arc, Mutex};
@@ -127,12 +127,6 @@ struct TransactionQueue {
     tx_config: Arc<TransactionConfig>,
     /// Last nonce used by SDK code (saved during previous call to process_transaction)
     last_used_nonce: Mutex<Option<u64>>,
-}
-
-/// Event signature for extending BTL (block time to live) of an entity.
-/// Used to identify `ArkivStorageEntityBTLExtended` events in logs.
-pub fn arkiv_storage_entity_btl_extended() -> B256 {
-    keccak256(b"ArkivEntityBTLExtended(uint256,address,uint256,uint256,uint256)")
 }
 
 impl TransactionQueue {
@@ -501,15 +495,14 @@ impl Account {
     /// Creates and sends a storage transaction to the Arkiv contract.
     /// Encodes the transaction payload and submits it to the storage processor contract.
     pub async fn send_db_transaction(&self, tx: ArkivTransaction) -> Result<TransactionReceipt> {
-        let mut data = Vec::new();
-        tx.encode(&mut data);
+        let data = tx.encode_compressed()?;
 
         let tx = TransactionRequest::default()
             .with_to(ARKIV_STORAGE_PROCESSOR_ADDRESS)
             .with_gas_limit(self.tx_config.gas_limit)
             .with_max_priority_fee_per_gas(self.tx_config.max_priority_fee_per_gas)
             .with_max_fee_per_gas(self.tx_config.max_fee_per_gas)
-            .with_input(data.to_vec());
+            .with_input(data);
 
         self.send_transaction(tx).await
     }

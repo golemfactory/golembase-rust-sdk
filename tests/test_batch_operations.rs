@@ -31,8 +31,7 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
         async move {
             let mut entity_ids = Vec::new();
             for i in 0..ENTITIES_PER_TASK {
-                let payload = format!("task1_entity_{}", i).into_bytes();
-                let entry = Create::new(payload, 300)
+                let entry = Create::text(format!("task1_entity_{}", i), 300)
                     .annotate_string("task", "task1")
                     .annotate_number("index", i as u64);
                 let entity_id = client.create_entry(account, entry).await?;
@@ -48,8 +47,7 @@ async fn test_concurrent_entity_creation_batch() -> Result<()> {
         async move {
             let mut entity_ids = Vec::new();
             for i in 0..ENTITIES_PER_TASK {
-                let payload = format!("task2_entity_{}", i).into_bytes();
-                let entry = Create::new(payload, 300)
+                let entry = Create::text(format!("task2_entity_{}", i), 300)
                     .annotate_string("task", "task2")
                     .annotate_number("index", i as u64);
                 let entity_id = client.create_entry(account, entry).await?;
@@ -104,15 +102,14 @@ async fn test_batch_entity_creation() -> Result<()> {
     // Create multiple entities in a single batch
     let mut creates = Vec::new();
     for i in 0..5 {
-        let payload = format!("batch_entity_{}", i).into_bytes();
-        let entry = Create::new(payload, 300)
+        let entry = Create::text(format!("batch_entity_{}", i), 300)
             .annotate_string("batch", "test")
             .annotate_number("index", i as u64);
         creates.push(entry);
     }
 
     // Use the batch creation function that returns entity IDs
-    let entity_ids = client.create_entries(account, creates).await?;
+    let entity_ids = client.create_entries(account, creates).await.unwrap();
 
     // Verify we got the expected number of entity IDs
     assert_eq!(entity_ids.len(), 5);

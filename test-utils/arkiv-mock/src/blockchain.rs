@@ -252,7 +252,7 @@ impl Blockchain {
 
         // Try to decode the transaction data as an ArkivTransaction
         // This is the inverse of the encoding shown in send_db_transaction
-        match ArkivTransaction::decode(&mut transaction.data.as_ref()) {
+        match ArkivTransaction::decode_compressed(transaction.data.as_ref()) {
             Ok(arkiv_tx) => {
                 // Process creates
                 for (idx, create) in arkiv_tx.creates.into_iter().enumerate() {
@@ -341,7 +341,6 @@ impl Blockchain {
                     builder.log_entity_ttl_extended(
                         transaction,
                         entity_key,
-                        updated_entity.owner,
                         old_expiration,
                         new_expiration,
                     );
@@ -360,6 +359,32 @@ impl Blockchain {
                             transaction.hash
                         );
                     }
+                }
+
+                // Process change owners
+                for change_owner in &arkiv_tx.change_owners {
+                    let entity_key = change_owner.entity_key;
+
+                    self.entity_db
+                        .get_entity(&entity_key)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Entity 0x{entity_key:x} not found for owner change (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    let updated_entity = self
+                        .entity_db
+                        .change_owner(&entity_key, change_owner.new_owner)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Failed to change owner for entity 0x{entity_key:x} (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    builder
+                        .log_entity_owner_changed(transaction, &updated_entity)
+                        .await;
                 }
             }
             Err(e) => {

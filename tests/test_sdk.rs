@@ -50,8 +50,7 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         async move {
             let mut creates = Vec::new();
             for i in 0..ENTITIES_PER_TASK {
-                let payload = format!("task1_entity_{}", i).into_bytes();
-                let entry = Create::new(payload, 300)
+                let entry = Create::text(format!("task1_entity_{}", i), 300)
                     .annotate_string("task", "task1")
                     .annotate_number("index", i as u64);
                 creates.push(entry);
@@ -66,8 +65,7 @@ async fn test_concurrent_entity_creation_batch_main_sdk() -> Result<()> {
         async move {
             let mut creates = Vec::new();
             for i in 0..ENTITIES_PER_TASK {
-                let payload = format!("task2_entity_{}", i).into_bytes();
-                let entry = Create::new(payload, 300)
+                let entry = Create::text(format!("task2_entity_{}", i), 300)
                     .annotate_string("task", "task2")
                     .annotate_number("index", i as u64);
                 creates.push(entry);

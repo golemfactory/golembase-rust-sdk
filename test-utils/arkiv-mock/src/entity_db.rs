@@ -471,6 +471,18 @@ impl EntityDb {
         }
     }
 
+    /// Change the owner of an existing entity
+    pub async fn change_owner(&self, entity_key: &B256, new_owner: Address) -> Option<Entity> {
+        let mut state = self.state.write().await;
+
+        if let Some(entity) = state.entities.get_mut(entity_key) {
+            entity.owner = new_owner;
+            Some(entity.clone())
+        } else {
+            None
+        }
+    }
+
     /// Function to remove all annotations for a specific entity
     fn remove_entity_annotations(state: &mut EntityDbState, entity_key: B256) {
         // Remove all existing annotations for this entity from hash maps
@@ -668,7 +680,7 @@ mod tests {
             .unwrap();
 
         // Create entity 1: user with high priority
-        let create1 = Create::new("user data 1".into(), 1000)
+        let create1 = Create::text("user data 1", 1000)
             .annotate_string("type", "user")
             .annotate_string("status", "active")
             .annotate_number("priority", 5u64)
@@ -678,7 +690,7 @@ mod tests {
         db.add_entity(entity1).await;
 
         // Create entity 2: admin with medium priority
-        let create2 = Create::new("admin data".into(), 2000)
+        let create2 = Create::text("admin data", 2000)
             .annotate_string("type", "admin")
             .annotate_string("status", "active")
             .annotate_number("priority", 3u64)
@@ -688,7 +700,7 @@ mod tests {
         db.add_entity(entity2).await;
 
         // Create entity 3: user with low priority, different owner
-        let create3 = Create::new("user data 2".into(), 500)
+        let create3 = Create::text("user data 2", 500)
             .annotate_string("type", "user")
             .annotate_string("status", "inactive")
             .annotate_number("priority", 1u64)

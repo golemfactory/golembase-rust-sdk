@@ -40,6 +40,7 @@ impl ArkivClient {
                 updates: vec![],
                 deletes: vec![],
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
@@ -65,6 +66,7 @@ impl ArkivClient {
                 updates,
                 deletes: vec![],
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
@@ -90,6 +92,7 @@ impl ArkivClient {
                 updates: vec![],
                 deletes,
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
@@ -115,6 +118,7 @@ impl ArkivClient {
                 updates: vec![],
                 deletes: vec![],
                 extensions,
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {

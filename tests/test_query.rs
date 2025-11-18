@@ -21,19 +21,19 @@ async fn test_query_entities() -> Result<()> {
     cleanup_entities(&client, account).await?;
 
     // Create entries with different annotations
-    let entry1 = Create::new(b"test1".to_vec(), 1000)
+    let entry1 = Create::text("test1", 1000)
         .annotate_string("type", "test")
         .annotate_string("category", "alpha");
     let entry1_id = client.create_entry(account, entry1).await?;
     log::info!("Created entry1: {entry1_id}");
 
-    let entry2 = Create::new(b"test2".to_vec(), 1000)
+    let entry2 = Create::text("test2", 1000)
         .annotate_string("type", "test")
         .annotate_string("category", "beta");
     let entry2_id = client.create_entry(account, entry2).await?;
     log::info!("Created entry2: {entry2_id}");
 
-    let entry3 = Create::new(b"test3".to_vec(), 1000)
+    let entry3 = Create::text("test3", 1000)
         .annotate_string("type", "demo")
         .annotate_string("category", "alpha");
     let entry3_id = client.create_entry(account, entry3).await?;

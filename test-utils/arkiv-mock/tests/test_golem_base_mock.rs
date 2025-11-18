@@ -40,8 +40,8 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     // Test basic entity creation
     log::info!("Creating test entity...");
 
-    let test_data = b"Hello, Arkiv!";
-    let create = Create::new(test_data.to_vec(), 100)
+    let test_data = "Hello, Arkiv!";
+    let create = Create::text(test_data, 100)
         .annotate_string("test_type", "Test")
         .annotate_number("test_timestamp", 1234567890);
 
@@ -53,7 +53,7 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     let storage_value = client.get_storage_value::<Vec<u8>>(result).await.unwrap();
     let storage_string = String::from_utf8(storage_value.clone()).unwrap();
     log::info!("Storage value: {}", storage_string);
-    assert_eq!(storage_value, test_data);
+    assert_eq!(storage_string, test_data);
 
     log::info!("Querying entities by string annotation 'test_type = \"Test\"'...");
     let test_type_results = client.query_entities("test_type = \"Test\"").await.unwrap();
@@ -63,10 +63,7 @@ async fn test_golem_base_mock_integration() -> anyhow::Result<()> {
     );
     assert_eq!(test_type_results.len(), 1);
     assert_eq!(test_type_results[0].key, result);
-    assert_eq!(
-        test_type_results[0].value.clone().unwrap(),
-        test_data.as_slice()
-    );
+    assert_eq!(test_type_results[0].value_as_string().unwrap(), test_data);
 
     log::info!("Querying entities by numeric annotation 'test_timestamp = 1234567890'...");
     let timestamp_results = client
@@ -163,7 +160,7 @@ async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
     let mut event_stream = events.events_stream().await.unwrap();
 
     // Create a test entity
-    let create = Create::from_string("test payload", TEST_TTL);
+    let create = Create::text("test payload", TEST_TTL);
     let entity_id = client.create_entry(account, create).await.unwrap();
 
     // Wait for and verify EntityCreated event
@@ -177,7 +174,7 @@ async fn test_golem_base_mock_event_listening() -> anyhow::Result<()> {
     }
 
     // Update the entity
-    let update = Update::from_string(entity_id, "test payload", TEST_TTL);
+    let update = Update::text(entity_id, "test payload", TEST_TTL);
     client.update_entry(account, update).await.unwrap();
 
     // Wait for and verify EntityUpdated event
@@ -218,7 +215,7 @@ async fn test_golem_base_mock_expiration() -> anyhow::Result<()> {
     let events = client.events_client().await.unwrap();
     let mut event_stream = events.events_stream().await.unwrap();
 
-    let entity = Create::new(b"test payload".to_vec(), 1);
+    let entity = Create::text("test payload", 1);
     let entity_id = client.create_entry(account, entity).await?;
 
     // Ignore EntityCreated event.

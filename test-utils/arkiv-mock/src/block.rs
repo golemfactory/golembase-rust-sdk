@@ -76,6 +76,26 @@ impl TransactionLog {
         }
     }
 
+    pub fn new_owner_change_log(
+        transaction: &Arc<Transaction>,
+        event_signature: B256,
+        entity_key: B256,
+        old_owner: Address,
+        new_owner: Address,
+    ) -> Self {
+        Self {
+            transaction_hash: transaction.hash,
+            address: arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS,
+            topics: vec![
+                event_signature,
+                entity_key,
+                LogEvent::encode_address(old_owner),
+                LogEvent::encode_address(new_owner),
+            ],
+            data: Bytes::new(),
+        }
+    }
+
     /// Convert to alloy LogData
     pub fn to_log_data(&self) -> Log {
         Log::new(self.address, self.topics.clone(), self.data.clone()).unwrap_or(Log::empty())

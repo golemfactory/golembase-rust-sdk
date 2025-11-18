@@ -33,8 +33,14 @@ pub fn arkiv_storage_entity_updated() -> B256 {
 
 /// Returns the event signature hash for TTL extension logs.
 /// Used to identify `ArkivEntityBTLExtended` events in the blockchain logs.
-pub fn arkiv_storage_entity_ttl_extended() -> B256 {
+pub fn arkiv_storage_entity_btl_extended() -> B256 {
     keccak256(b"ArkivEntityBTLExtended(uint256,address,uint256,uint256,uint256)")
+}
+
+/// Returns the event signature hash for owner change logs.
+/// Used to identify `ArkivEntityOwnerChanged` events in the blockchain logs.
+pub fn arkiv_storage_entity_owner_changed() -> B256 {
+    keccak256(b"ArkivEntityOwnerChanged(uint256,address,address)")
 }
 
 /// Represents an Arkiv event parsed from the blockchain log.
@@ -166,6 +172,8 @@ impl EventsClient {
                 arkiv_storage_entity_created(),
                 arkiv_storage_entity_updated(),
                 arkiv_storage_entity_deleted(),
+                arkiv_storage_entity_btl_extended(),
+                arkiv_storage_entity_owner_changed(),
             ])
     }
 

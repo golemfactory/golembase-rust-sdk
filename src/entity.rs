@@ -1,8 +1,12 @@
-use alloy::primitives::B256;
-use alloy_rlp::{Encodable, RlpDecodable, RlpEncodable};
+use alloy::primitives::{Address, B256};
+use alloy_rlp::{Decodable, Encodable, RlpDecodable, RlpEncodable};
+use anyhow::anyhow;
+use brotli::enc::{BrotliCompress, BrotliEncoderParams};
+use brotli::Decompressor;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
+use std::io::Read;
 
 /// A generic key-value pair structure for entity annotations.
 /// Used for both string and numeric metadata attached to entities.
@@ -48,6 +52,8 @@ pub type Key = String;
 pub struct Create {
     /// The block-to-live (BTL) for the entity.
     pub btl: u64,
+    /// The content type (MIME type) of the payload.
+    pub content_type: String,
     /// The data associated with the entity.
     pub data: Bytes,
     /// String annotations for the entity.
@@ -63,6 +69,8 @@ pub struct Create {
 pub struct Update {
     /// The key of the entity to update.
     pub entity_key: Hash,
+    /// The content type (MIME type) of the payload.
+    pub content_type: String,
     /// The updated block-to-live (BTL) for the entity.
     pub btl: u64,
     /// The updated data for the entity.
@@ -86,7 +94,17 @@ pub struct Extend {
     pub number_of_blocks: u64,
 }
 
-/// Type representing a transaction in Arkiv, including creates, updates, deletes, and extensions.
+/// Type representing a change owner transaction in Arkiv.
+/// Used to transfer ownership of an entity to a new address.
+#[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable, Deserialize)]
+pub struct ChangeOwner {
+    /// The key of the entity.
+    pub entity_key: Hash,
+    /// The new owner address.
+    pub new_owner: Address,
+}
+
+/// Type representing a transaction in Arkiv, including creates, updates, deletes, extensions, and owner changes.
 /// Used as the main payload for submitting entity changes to the chain.
 #[derive(Debug, Clone, Default, RlpEncodable, RlpDecodable)]
 pub struct ArkivTransaction {
@@ -98,6 +116,8 @@ pub struct ArkivTransaction {
     pub deletes: Vec<ArkivDelete>,
     /// A list of entities to extend.
     pub extensions: Vec<Extend>,
+    /// A list of owner changes.
+    pub change_owners: Vec<ChangeOwner>,
 }
 
 /// Represents an entity with data, BTL, and annotations.
@@ -146,21 +166,46 @@ pub struct DeleteResult {
 
 impl Create {
     /// Creates a new `Create` operation with empty annotations.
-    /// Accepts a payload as bytes and a BTL value.
-    pub fn new(payload: Vec<u8>, btl: u64) -> Self {
+    /// Requires explicit content type to be specified.
+    pub fn new(payload: Vec<u8>, content_type: impl Into<String>, btl: u64) -> Self {
         Self {
             btl,
+            content_type: content_type.into(),
             data: Bytes::from(payload),
             string_annotations: Vec::new(),
             numeric_annotations: Vec::new(),
         }
     }
 
-    /// Creates a new `Create` request from any type that can be converted to `String`.
-    pub fn from_string(payload: impl Into<String>, btl: u64) -> Self {
+    /// Creates a new `Create` operation with JSON content type.
+    /// The payload will be serialized as JSON bytes.
+    pub fn json(payload: impl Into<Vec<u8>>, btl: u64) -> Self {
         Self {
             btl,
+            content_type: "application/json".to_string(),
+            data: Bytes::from(payload.into()),
+            string_annotations: Vec::new(),
+            numeric_annotations: Vec::new(),
+        }
+    }
+
+    /// Creates a new `Create` operation with text/plain content type.
+    pub fn text(payload: impl Into<String>, btl: u64) -> Self {
+        Self {
+            btl,
+            content_type: "text/plain".to_string(),
             data: Bytes::from(payload.into().into_bytes()),
+            string_annotations: Vec::new(),
+            numeric_annotations: Vec::new(),
+        }
+    }
+
+    /// Creates a new `Create` operation with application/octet-stream content type.
+    pub fn binary(payload: Vec<u8>, btl: u64) -> Self {
+        Self {
+            btl,
+            content_type: "application/octet-stream".to_string(),
+            data: Bytes::from(payload),
             string_annotations: Vec::new(),
             numeric_annotations: Vec::new(),
         }
@@ -189,10 +234,16 @@ impl Create {
 
 impl Update {
     /// Creates a new `Update` operation with empty annotations.
-    /// Accepts an entity key, payload as bytes, and a BTL value.
-    pub fn new(entity_key: B256, payload: Vec<u8>, btl: u64) -> Self {
+    /// Requires explicit content type to be specified.
+    pub fn new(
+        entity_key: B256,
+        payload: Vec<u8>,
+        content_type: impl Into<String>,
+        btl: u64,
+    ) -> Self {
         Self {
             entity_key,
+            content_type: content_type.into(),
             btl,
             data: Bytes::from(payload),
             string_annotations: Vec::new(),
@@ -200,12 +251,37 @@ impl Update {
         }
     }
 
-    /// Creates a new `Update` request from any type that can be converted to `String`.
-    pub fn from_string<T: Into<String>>(entity_key: B256, payload: T, btl: u64) -> Self {
+    /// Creates a new `Update` operation with JSON content type.
+    pub fn json(entity_key: B256, payload: impl Into<Vec<u8>>, btl: u64) -> Self {
         Self {
             entity_key,
+            content_type: "application/json".to_string(),
+            btl,
+            data: Bytes::from(payload.into()),
+            string_annotations: Vec::new(),
+            numeric_annotations: Vec::new(),
+        }
+    }
+
+    /// Creates a new `Update` operation with text/plain content type.
+    pub fn text(entity_key: B256, payload: impl Into<String>, btl: u64) -> Self {
+        Self {
+            entity_key,
+            content_type: "text/plain".to_string(),
             btl,
             data: Bytes::from(payload.into().into_bytes()),
+            string_annotations: Vec::new(),
+            numeric_annotations: Vec::new(),
+        }
+    }
+
+    /// Creates a new `Update` operation with application/octet-stream content type.
+    pub fn binary(entity_key: B256, payload: Vec<u8>, btl: u64) -> Self {
+        Self {
+            entity_key,
+            content_type: "application/octet-stream".to_string(),
+            btl,
+            data: Bytes::from(payload),
             string_annotations: Vec::new(),
             numeric_annotations: Vec::new(),
         }
@@ -240,6 +316,32 @@ impl ArkivTransaction {
         self.encode(&mut encoded);
         encoded
     }
+
+    pub fn encode_compressed(&self) -> anyhow::Result<Vec<u8>> {
+        let mut rlp_encoded = Vec::new();
+        self.encode(&mut rlp_encoded);
+
+        let mut compressed = Vec::new();
+        BrotliCompress(
+            &mut rlp_encoded.as_slice(),
+            &mut compressed,
+            &BrotliEncoderParams::default(),
+        )
+        .map_err(|e| anyhow!("Failed to compress transaction: {e}"))?;
+
+        Ok(compressed)
+    }
+
+    pub fn decode_compressed(data: &[u8]) -> anyhow::Result<Self> {
+        let mut decompressed = Vec::new();
+        let mut decompressor = Decompressor::new(data, 4096);
+        decompressor
+            .read_to_end(&mut decompressed)
+            .map_err(|e| anyhow!("Failed to decompress transaction: {e}"))?;
+
+        let mut decompressed_slice = decompressed.as_slice();
+        Self::decode(&mut decompressed_slice).map_err(|e| anyhow!("Failed to decode RLP: {e}"))
+    }
 }
 
 // Tests check serialization compatibility with go implementation.
@@ -252,25 +354,25 @@ mod tests {
     #[test]
     fn test_empty_transaction() {
         let tx = ArkivTransaction::default();
-        assert_eq!(hex::encode(tx.encoded()), "c4c0c0c0c0");
+        assert_eq!(hex::encode(tx.encoded()), "c5c0c0c0c0c0");
     }
 
     #[test]
     fn test_create_without_annotations() {
-        let create = Create::new(b"test payload".to_vec(), 1000);
+        let create = Create::text("test payload", 1000);
 
         let mut tx = ArkivTransaction::default();
         tx.creates.push(create);
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "d7d3d28203e88c74657374207061796c6f6164c0c0c0c0c0"
+            "e3dedd8203e88a746578742f706c61696e8c74657374207061796c6f6164c0c0c0c0c0c0"
         );
     }
 
     #[test]
     fn test_create_with_annotations() {
-        let create = Create::new(b"test payload".to_vec(), 1000)
+        let create = Create::text("test payload", 1000)
             .annotate_string("foo", "bar")
             .annotate_number("baz", 42);
 
@@ -279,26 +381,22 @@ mod tests {
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "e6e2e18203e88c74657374207061796c6f6164c9c883666f6f83626172c6c58362617a2ac0c0c0"
+            "f2edec8203e88a746578742f706c61696e8c74657374207061796c6f6164c9c883666f6f83626172c6c58362617a2ac0c0c0c0"
         );
     }
 
     #[test]
     fn test_update_with_annotations() {
-        let update = Update::new(
-            B256::from_slice(&[1; 32]),
-            b"updated payload".to_vec(),
-            2000,
-        )
-        .annotate_string("status", "active")
-        .annotate_number("version", 2);
+        let update = Update::text(B256::from_slice(&[1; 32]), "updated payload", 2000)
+            .annotate_string("status", "active")
+            .annotate_number("version", 2);
 
         let mut tx = ArkivTransaction::default();
         tx.updates.push(update);
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "f856c0f851f84fa001010101010101010101010101010101010101010101010101010101010101018207d08f75706461746564207061796c6f6164cfce8673746174757386616374697665cac98776657273696f6e02c0c0"
+            "f862c0f85cf85aa001010101010101010101010101010101010101010101010101010101010101018a746578742f706c61696e8207d08f75706461746564207061796c6f6164cfce8673746174757386616374697665cac98776657273696f6e02c0c0c0"
         );
     }
 
@@ -309,7 +407,7 @@ mod tests {
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "e5c0c0e1a00202020202020202020202020202020202020202020202020202020202020202c0"
+            "e6c0c0e1a00202020202020202020202020202020202020202020202020202020202020202c0c0"
         );
     }
 
@@ -323,18 +421,14 @@ mod tests {
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "e9c0c0c0e5e4a003030303030303030303030303030303030303030303030303030303030303038201f4"
+            "eac0c0c0e5e4a003030303030303030303030303030303030303030303030303030303030303038201f4c0"
         );
     }
 
     #[test]
     fn test_mixed_operations() {
-        let create = Create::new(b"test payload".to_vec(), 1000).annotate_string("type", "test");
-        let update = Update::new(
-            B256::from_slice(&[1; 32]),
-            b"updated payload".to_vec(),
-            2000,
-        );
+        let create = Create::text("test payload", 1000).annotate_string("type", "test");
+        let update = Update::text(B256::from_slice(&[1; 32]), "updated payload", 2000);
         let mut tx = ArkivTransaction::default();
         tx.creates.push(create);
         tx.updates.push(update);
@@ -346,7 +440,37 @@ mod tests {
 
         assert_eq!(
             hex::encode(tx.encoded()),
-            "f89fdedd8203e88c74657374207061796c6f6164cbca84747970658474657374c0f7f6a001010101010101010101010101010101010101010101010101010101010101018207d08f75706461746564207061796c6f6164c0c0e1a00202020202020202020202020202020202020202020202020202020202020202e5e4a003030303030303030303030303030303030303030303030303030303030303038201f4"
+            "f8b8e9e88203e88a746578742f706c61696e8c74657374207061796c6f6164cbca84747970658474657374c0f843f841a001010101010101010101010101010101010101010101010101010101010101018a746578742f706c61696e8207d08f75706461746564207061796c6f6164c0c0e1a00202020202020202020202020202020202020202020202020202020202020202e5e4a003030303030303030303030303030303030303030303030303030303030303038201f4c0"
+        );
+    }
+
+    #[test]
+    fn test_compress_decompress_round_trip() {
+        let mut tx = ArkivTransaction::default();
+        tx.creates
+            .push(Create::text("test payload", 1000).annotate_string("foo", "bar"));
+        tx.updates
+            .push(Update::text(B256::from_slice(&[1; 32]), "updated", 2000));
+        tx.deletes.push(B256::from_slice(&[2; 32]));
+        tx.extensions.push(Extend {
+            entity_key: B256::from_slice(&[3; 32]),
+            number_of_blocks: 500,
+        });
+
+        let compressed = tx.encode_compressed().unwrap();
+        let decoded = ArkivTransaction::decode_compressed(&compressed).unwrap();
+
+        assert_eq!(decoded.creates.len(), tx.creates.len());
+        assert_eq!(decoded.creates[0].data, tx.creates[0].data);
+        assert_eq!(decoded.creates[0].btl, tx.creates[0].btl);
+        assert_eq!(decoded.creates[0].content_type, tx.creates[0].content_type);
+        assert_eq!(decoded.updates[0].data, tx.updates[0].data);
+        assert_eq!(decoded.updates[0].btl, tx.updates[0].btl);
+        assert_eq!(decoded.updates[0].content_type, tx.updates[0].content_type);
+        assert_eq!(decoded.deletes[0], tx.deletes[0]);
+        assert_eq!(
+            decoded.extensions[0].number_of_blocks,
+            tx.extensions[0].number_of_blocks
         );
     }
 }

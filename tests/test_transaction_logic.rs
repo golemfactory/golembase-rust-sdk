@@ -31,7 +31,7 @@ async fn test_transaction_random_errors() -> anyhow::Result<()> {
     }));
 
     for i in 0..NUM_ITERATIONS {
-        let create = Create::from_string("Hello, GolemBase!", 100)
+        let create = Create::text("Hello, GolemBase!", 100)
             .annotate_string("test_type", "Test")
             .annotate_number("test_timestamp", 1234567890)
             .annotate_number("iteration", i as u64);
@@ -65,7 +65,7 @@ async fn test_transaction_indexing_in_progress() -> anyhow::Result<()> {
         },
     );
 
-    let create = Create::from_string("Hello, GolemBase!", 100)
+    let create = Create::text("Hello, GolemBase!", 100)
         .annotate_string("test_type", "Test")
         .annotate_number("test_timestamp", 1234567890);
 
@@ -85,7 +85,7 @@ async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
     let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -103,7 +103,7 @@ async fn test_transaction_nonce_too_low() -> anyhow::Result<()> {
     );
 
     log::info!("Creating entity with nonce too low...");
-    let create = Create::from_string("Hello 2", 100);
+    let create = Create::text("Hello 2", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created entity {result}...");
 
@@ -120,7 +120,7 @@ async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
     let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -143,7 +143,7 @@ async fn test_transaction_nonce_too_low_new_client() -> anyhow::Result<()> {
     client2.account_load(account, "test123").await?;
 
     log::info!("Creating entity with nonce too low...");
-    let create = Create::from_string("Hello 2", 100);
+    let create = Create::text("Hello 2", 100);
     let result = client2.create_entry(account, create).await.unwrap();
     log::info!("Created entity {result}...");
 
@@ -162,7 +162,7 @@ async fn test_transaction_wait_for_confirmations() -> anyhow::Result<()> {
     });
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
     Ok(())
@@ -177,7 +177,7 @@ async fn test_transaction_rpc_pause() -> anyhow::Result<()> {
     let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -186,13 +186,13 @@ async fn test_transaction_rpc_pause() -> anyhow::Result<()> {
 
     log::info!("Creating entity when RPC is down... It should fail.");
     let result = client
-        .create_entry(account, Create::from_string("Hello 2", 100))
+        .create_entry(account, Create::text("Hello 2", 100))
         .await;
     assert!(result.is_err());
     container.unpause().await.unwrap();
 
     log::info!("Creating entity after RPC restart... It should succeed.");
-    let create = Create::from_string("Hello 3", 100);
+    let create = Create::text("Hello 3", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created entity {result}...");
 
@@ -209,7 +209,7 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
     let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -219,7 +219,7 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
 
     log::info!("Creating entity when RPC is down... It should fail.");
     let result = client
-        .create_entry(account, Create::from_string("Hello 2", 100))
+        .create_entry(account, Create::text("Hello 2", 100))
         .await;
     assert!(result.is_err());
 
@@ -227,7 +227,7 @@ async fn test_transaction_rpc_restart() -> anyhow::Result<()> {
     container.restart().await.unwrap();
 
     log::info!("Creating entity after RPC restart... It should succeed.");
-    let create = Create::from_string("Hello 3", 100);
+    let create = Create::text("Hello 3", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created entity {result}...");
 
@@ -243,7 +243,7 @@ async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
     let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -254,7 +254,7 @@ async fn test_transaction_no_rpc_available() -> anyhow::Result<()> {
     log::info!("Creating entity when RPC is down... It should fail.");
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(120),
-        client.create_entry(account, Create::from_string("Hello 2", 100)),
+        client.create_entry(account, Create::text("Hello 2", 100)),
     )
     .await
     .expect("Call timed out - function should have failed internally before our timeout");
@@ -315,7 +315,7 @@ async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
     log::info!("✅ Successfully created account with correct chain ID: {account}");
 
     // First transaction should succeed
-    let create = Create::from_string("Hello, GolemBase!", 100);
+    let create = Create::text("Hello, GolemBase!", 100);
     let result = client.create_entry(account, create).await?;
     log::info!("✅ Successfully created first entity {result} with correct chain ID");
 
@@ -324,7 +324,7 @@ async fn test_transaction_chain_id_change() -> anyhow::Result<()> {
     mock.state.set_chain_id(9999);
 
     // Attempting to send another transaction should fail due to chain ID mismatch
-    let create2 = Create::from_string("Hello again!", 100);
+    let create2 = Create::text("Hello again!", 100);
     let result2 = client.create_entry(account, create2).await;
     assert!(result2.is_err());
 
@@ -353,14 +353,14 @@ async fn test_transaction_stacked_pending() -> anyhow::Result<()> {
         .hold_transactions_for(Duration::from_secs(20))
         .await;
 
-    let create = Create::from_string("E1", 100);
+    let create = Create::text("E1", 100);
     let result = client.create_entry(account, create).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("timed out"));
     log::info!("First entity creation timed out");
 
     log::info!("Second entity will wait for previous pending transaction and will send a new one afterwards.");
-    let create = Create::from_string("E2", 100);
+    let create = Create::text("E2", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created second entity {result}...");
 
@@ -385,14 +385,14 @@ async fn test_transaction_stacked_pending_for_infinity() -> anyhow::Result<()> {
         .hold_transactions_for(Duration::from_secs(120))
         .await;
 
-    let create = Create::from_string("E1", 100);
+    let create = Create::text("E1", 100);
     let result = client.create_entry(account, create).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("timed out"));
     log::info!("First entity creation timed out");
 
     log::info!("Second transaction should be rejected due to still pending transaction.");
-    let create = Create::from_string("E2", 100);
+    let create = Create::text("E2", 100);
     let result = client.create_entry(account, create).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("pending"));
@@ -411,7 +411,7 @@ async fn test_transaction_nonce_reset() -> anyhow::Result<()> {
     let client = ArkivClient::new(mock.url().clone())?;
     let account = create_test_account(&client).await.unwrap();
 
-    let create = Create::from_string("E1", 100);
+    let create = Create::text("E1", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created first entity {result}...");
 
@@ -419,7 +419,7 @@ async fn test_transaction_nonce_reset() -> anyhow::Result<()> {
     mock.reset_blockchain_to_genesis().await;
 
     log::info!("Second transaction should succeed with nonce reset to 0.");
-    let create = Create::from_string("E2", 100);
+    let create = Create::text("E2", 100);
     let result = client.create_entry(account, create).await.unwrap();
     log::info!("Created second entity {result}...");
 
@@ -438,7 +438,7 @@ async fn test_handle_external_transaction() -> anyhow::Result<()> {
     let account = create_test_account(&client).await.unwrap();
 
     log::info!("Creating first entity with SDK");
-    let create1 = Create::from_string("E1", 100);
+    let create1 = Create::text("E1", 100);
     let result1 = client.create_entry(account, create1).await.unwrap();
     log::info!("Created first entity {result1}...");
 
@@ -447,7 +447,7 @@ async fn test_handle_external_transaction() -> anyhow::Result<()> {
     let external_client = ArkivClient::new(mock.url().clone())?;
     external_client.account_register(external_signer).await?;
 
-    let external_create = Create::from_string("External", 100);
+    let external_create = Create::text("External", 100);
     let external_result = external_client
         .create_entry(account, external_create)
         .await
@@ -460,13 +460,13 @@ async fn test_handle_external_transaction() -> anyhow::Result<()> {
     log::info!(
         "Creating second entity with SDK - should discover external transaction and adjust nonce"
     );
-    let create2 = Create::from_string("E2", 100);
+    let create2 = Create::text("E2", 100);
     let result2 = client.create_entry(account, create2).await.unwrap();
     log::info!("Created second entity {result2}...");
 
     log::info!("Creating multiple external transactions in a row");
     for i in 1..=3 {
-        let external_create = Create::from_string(&format!("External{}", i), 100);
+        let external_create = Create::text(&format!("External{}", i), 100);
         let external_result = external_client
             .create_entry(account, external_create)
             .await
@@ -480,7 +480,7 @@ async fn test_handle_external_transaction() -> anyhow::Result<()> {
     log::info!(
         "Creating third entity with SDK - should discover all external transactions and adjust nonce"
     );
-    let create3 = Create::from_string("E3", 100);
+    let create3 = Create::text("E3", 100);
     let result3 = client.create_entry(account, create3).await.unwrap();
     log::info!("Created third entity {result3}...");
 

@@ -35,20 +35,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Creating entities...");
     let creates = vec![
         Create {
-            data: "foo".into(),
             btl: 25,
+            content_type: "text/plain".to_string(),
+            data: "foo".into(),
             string_annotations: vec![Annotation::new("key", "foo")],
             numeric_annotations: vec![Annotation::new("ix", 1u64)],
         },
         Create {
-            data: "bar".into(),
             btl: 2,
+            content_type: "text/plain".to_string(),
+            data: "bar".into(),
             string_annotations: vec![Annotation::new("key", "bar")],
             numeric_annotations: vec![Annotation::new("ix", 2u64)],
         },
         Create {
-            data: "qux".into(),
             btl: 50,
+            content_type: "text/plain".to_string(),
+            data: "qux".into(),
             string_annotations: vec![Annotation::new("key", "qux")],
             numeric_annotations: vec![Annotation::new("ix", 3u64)],
         },
@@ -67,11 +70,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("... before the update: {:?}", metadata);
     client
         .update_entities(vec![Update {
-            data: "foobar".into(),
+            entity_key: third_entity_key,
+            content_type: String::new(),
             btl: 40,
+            data: "foobar".into(),
             string_annotations: vec![Annotation::new("key", "qux"), Annotation::new("foo", "bar")],
             numeric_annotations: vec![Annotation::new("ix", 2u64)],
-            entity_key: third_entity_key,
         }])
         .await?;
     let metadata = client.get_entity_metadata(third_entity_key).await?;

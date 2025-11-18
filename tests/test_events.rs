@@ -27,7 +27,7 @@ async fn test_event_listening() -> Result<()> {
     let mut event_stream = events.events_stream().await.unwrap();
 
     // Create a test entity
-    let create = Create::from_string("test payload", TEST_TTL);
+    let create = Create::text("test payload", TEST_TTL);
     let entity_id = client.create_entry(account, create).await.unwrap();
 
     // Wait for and verify EntityCreated event
@@ -41,7 +41,7 @@ async fn test_event_listening() -> Result<()> {
     }
 
     // Update the entity
-    let update = Update::from_string(entity_id, "test payload", TEST_TTL);
+    let update = Update::text(entity_id, "test payload", TEST_TTL);
     client.update_entry(account, update).await.unwrap();
 
     // Wait for and verify EntityUpdated event
@@ -86,7 +86,7 @@ async fn test_event_listening_with_timeout() -> Result<()> {
     let mut event_stream = events.events_stream().await.unwrap();
 
     // Create a test entity
-    let create = Create::from_string("test payload", TEST_TTL);
+    let create = Create::text("test payload", TEST_TTL);
     let entity_id = client.create_entry(account, create).await.unwrap();
 
     // Wait for event with timeout

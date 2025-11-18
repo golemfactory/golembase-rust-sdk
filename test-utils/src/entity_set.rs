@@ -12,7 +12,7 @@ pub async fn create_standard_test_entities(
     let entity1 = client
         .create_entry(
             account,
-            Create::new(b"test_data_1".to_vec(), 1000)
+            Create::text("test_data_1", 1000)
                 .annotate_string("type", "test")
                 .annotate_string("category", "alpha")
                 .annotate_string("status", "active")
@@ -23,7 +23,7 @@ pub async fn create_standard_test_entities(
     let entity2 = client
         .create_entry(
             account,
-            Create::new(b"test_data_2".to_vec(), 2000)
+            Create::text("test_data_2", 2000)
                 .annotate_string("type", "test")
                 .annotate_string("category", "beta")
                 .annotate_string("status", "inactive")
@@ -34,7 +34,7 @@ pub async fn create_standard_test_entities(
     let entity3 = client
         .create_entry(
             account,
-            Create::new(b"test_data_3".to_vec(), 3000)
+            Create::text("test_data_3", 3000)
                 .annotate_string("type", "demo")
                 .annotate_string("category", "alpha")
                 .annotate_string("status", "active")
@@ -45,7 +45,7 @@ pub async fn create_standard_test_entities(
     let entity4 = client
         .create_entry(
             account,
-            Create::new(b"test_data_4".to_vec(), 4000)
+            Create::text("test_data_4", 4000)
                 .annotate_string("type", "demo")
                 .annotate_string("category", "gamma")
                 .annotate_string("status", "pending")
@@ -65,19 +65,19 @@ pub async fn create_owner_test_entities(
     let entity1 = client
         .create_entry(
             account1,
-            Create::new(b"account1_data_1".to_vec(), 1000).annotate_string("owner", "account1"),
+            Create::text("account1_data_1", 1000).annotate_string("owner", "account1"),
         )
         .await?;
     let entity2 = client
         .create_entry(
             account1,
-            Create::new(b"account1_data_2".to_vec(), 1000).annotate_string("owner", "account1"),
+            Create::text("account1_data_2", 1000).annotate_string("owner", "account1"),
         )
         .await?;
     let entity3 = client
         .create_entry(
             account2,
-            Create::new(b"account2_data_1".to_vec(), 1000).annotate_string("owner", "account2"),
+            Create::text("account2_data_1", 1000).annotate_string("owner", "account2"),
         )
         .await?;
     Ok((entity1, entity2, entity3))
@@ -91,22 +91,19 @@ pub async fn create_expiration_test_entities(
     let entity1 = client
         .create_entry(
             account,
-            Create::new(b"expire_test_1".to_vec(), 1000)
-                .annotate_string("expiration_test", "block_1000"),
+            Create::text("expire_test_1", 1000).annotate_string("expiration_test", "block_1000"),
         )
         .await?;
     let entity2 = client
         .create_entry(
             account,
-            Create::new(b"expire_test_2".to_vec(), 2000)
-                .annotate_string("expiration_test", "block_2000"),
+            Create::text("expire_test_2", 2000).annotate_string("expiration_test", "block_2000"),
         )
         .await?;
     let entity3 = client
         .create_entry(
             account,
-            Create::new(b"expire_test_3".to_vec(), 3000)
-                .annotate_string("expiration_test", "block_3000"),
+            Create::text("expire_test_3", 3000).annotate_string("expiration_test", "block_3000"),
         )
         .await?;
     Ok((entity1, entity2, entity3))
@@ -127,24 +124,21 @@ pub async fn create_large_count_test_entities(
         let mut creates = Vec::with_capacity(BATCH_SIZE);
 
         for i in batch_start..batch_end {
-            let entry = Create::new(
-                format!("pagination_test_data_{:06}", i).as_bytes().to_vec(),
-                1000 + i as u64,
-            )
-            .annotate_string("test_type", "pagination_count")
-            .annotate_string(
-                "category",
-                match i % 4 {
-                    0 => "alpha",
-                    1 => "beta",
-                    2 => "gamma",
-                    _ => "delta",
-                },
-            )
-            .annotate_string("status", if i % 2 == 0 { "active" } else { "inactive" })
-            .annotate_number("sequence", i as u64)
-            .annotate_number("priority", (i % 10) as u64)
-            .annotate_number("batch", (i / 100) as u64);
+            let entry = Create::text(format!("pagination_test_data_{:06}", i), 1000 + i as u64)
+                .annotate_string("test_type", "pagination_count")
+                .annotate_string(
+                    "category",
+                    match i % 4 {
+                        0 => "alpha",
+                        1 => "beta",
+                        2 => "gamma",
+                        _ => "delta",
+                    },
+                )
+                .annotate_string("status", if i % 2 == 0 { "active" } else { "inactive" })
+                .annotate_number("sequence", i as u64)
+                .annotate_number("priority", (i % 10) as u64)
+                .annotate_number("batch", (i / 100) as u64);
             creates.push(entry);
         }
 
@@ -183,7 +177,7 @@ pub async fn create_large_size_test_entities(
         let entity = client
             .create_entry(
                 account,
-                Create::new(data, 1000 + i as u64)
+                Create::binary(data, 1000 + i as u64)
                     .annotate_string("test_type", "pagination_size")
                     .annotate_string(
                         "size_category",
@@ -229,7 +223,7 @@ pub async fn create_mixed_size_test_entities(
         let mut small_creates = Vec::with_capacity(BATCH_SIZE);
 
         for i in batch_start..batch_end {
-            let entry = Create::new(vec![b'S'; 1024], 1000 + i as u64)
+            let entry = Create::binary(vec![b'S'; 1024], 1000 + i as u64)
                 .annotate_string("test_type", "mixed_size")
                 .annotate_string("size_category", "small")
                 .annotate_number("size_bytes", 1024)
@@ -246,7 +240,7 @@ pub async fn create_mixed_size_test_entities(
         let entity = client
             .create_entry(
                 account,
-                Create::new(vec![b'L'; 32 * 1024], 2000 + i as u64)
+                Create::binary(vec![b'L'; 32 * 1024], 2000 + i as u64)
                     .annotate_string("test_type", "mixed_size")
                     .annotate_string("size_category", "large")
                     .annotate_number("size_bytes", 32 * 1024)
