@@ -128,8 +128,7 @@ async fn test_get_storage_value() -> Result<()> {
     let entity_id = client
         .create_entry(
             account,
-            Create::new(test_payload.as_bytes().to_vec(), 1000)
-                .annotate_string("type", "storage_test"),
+            Create::text(test_payload, 1000).annotate_string("type", "storage_test"),
         )
         .await?;
 
@@ -323,7 +322,7 @@ async fn test_get_entity_metadata() -> Result<()> {
     let entity_id = client
         .create_entry(
             account,
-            Create::new(b"metadata_test_data".to_vec(), 1000)
+            Create::text("metadata_test_data", 1000)
                 .annotate_string("type", "metadata_test")
                 .annotate_string("category", "test")
                 .annotate_number("priority", 5)
@@ -338,8 +337,8 @@ async fn test_get_entity_metadata() -> Result<()> {
     assert_eq!(metadata.key, entity_id);
     assert!(metadata.value.is_some());
     assert_eq!(
-        metadata.value.as_ref().unwrap().as_ref(),
-        b"metadata_test_data"
+        String::from_utf8(metadata.value.as_ref().unwrap().as_ref().to_vec()).unwrap(),
+        "metadata_test_data"
     );
     assert!(metadata.expires_at.is_some());
     assert!(metadata.owner.is_some());
@@ -423,21 +422,20 @@ async fn test_query_entities_with_empty_annotations() -> Result<()> {
     let account = create_test_account(&client).await?;
 
     // Create entities with no annotations
-    let create_no_annotations = Create::new(b"no_annotations_data".to_vec(), 1000);
+    let create_no_annotations = Create::text("no_annotations_data", 1000);
     let entity_without_annotations = client.create_entry(account, create_no_annotations).await?;
 
     // Create entity with only string annotations
     let create_string_only =
-        Create::new(b"string_only_data".to_vec(), 1000).annotate_string("type", "string_only");
+        Create::text("string_only_data", 1000).annotate_string("type", "string_only");
     let entity_with_string_only = client.create_entry(account, create_string_only).await?;
 
     // Create entity with only numeric annotations
-    let create_numeric_only =
-        Create::new(b"numeric_only_data".to_vec(), 1000).annotate_number("count", 5);
+    let create_numeric_only = Create::text("numeric_only_data", 1000).annotate_number("count", 5);
     let entity_with_numeric_only = client.create_entry(account, create_numeric_only).await?;
 
     // Create entity with both types of annotations
-    let create_both = Create::new(b"both_annotations_data".to_vec(), 1000)
+    let create_both = Create::text("both_annotations_data", 1000)
         .annotate_string("type", "both")
         .annotate_number("value", 10);
     let entity_with_both = client.create_entry(account, create_both).await?;

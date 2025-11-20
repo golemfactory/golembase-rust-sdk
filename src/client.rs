@@ -443,6 +443,7 @@ impl ArkivClient {
             updates: vec![],
             deletes: vec![],
             extensions: vec![],
+            change_owners: vec![],
         };
 
         log::debug!(
@@ -522,6 +523,7 @@ impl ArkivClient {
             updates: vec![],
             deletes: entry_ids,
             extensions: vec![],
+            change_owners: vec![],
         };
 
         log::debug!(
@@ -582,6 +584,7 @@ impl ArkivClient {
             updates: vec![update],
             deletes: vec![],
             extensions: vec![],
+            change_owners: vec![],
         };
 
         log::debug!(

@@ -41,10 +41,27 @@ pub struct SearchResult {
         default
     )]
     pub value: Option<Bytes>,
+    #[serde(rename = "contentType", skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
     #[serde(rename = "expiresAt", skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<u64>,
     #[serde(rename = "owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<Address>,
+    #[serde(
+        rename = "lastModifiedAtBlock",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub last_modified_at_block: Option<u64>,
+    #[serde(
+        rename = "transactionIndexInBlock",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub transaction_index_in_block: Option<u64>,
+    #[serde(
+        rename = "operationIndexInTransaction",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub operation_index_in_transaction: Option<u64>,
     #[serde(
         rename = "stringAttributes",
         skip_serializing_if = "Vec::is_empty",

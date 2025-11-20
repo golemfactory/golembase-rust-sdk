@@ -23,10 +23,10 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
     let client = ArkivClient::new(container.get_url()?)?;
     let account = create_test_account(&client).await?;
 
-    let test_payload = b"test payload".to_vec();
+    let test_payload = "test payload";
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
-    let entry = Create::new(test_payload.clone(), 1000)
+    let entry = Create::text(test_payload, 1000)
         .annotate_string("test_type", "Test")
         .annotate_number("test_timestamp", timestamp);
 
@@ -40,7 +40,7 @@ async fn test_create_and_retrieve_entry() -> Result<()> {
 
     let entry_str = client.cat(entry_id).await?;
     log::info!("Retrieved entry 0x{entry_id:x}: {entry_str}");
-    assert_eq!(entry_str, String::from_utf8(test_payload)?);
+    assert_eq!(entry_str, test_payload);
 
     let metadata = client.get_entity_metadata(entry_id).await?;
     log::info!("Retrieved metadata for entry 0x{entry_id:x}: {metadata:?}");
@@ -64,9 +64,9 @@ async fn test_entity_operations() -> Result<()> {
     let account = create_test_account(&client).await?;
 
     // Create first entity
-    let payload1 = b"first entity".to_vec();
+    let payload1 = "first entity";
     let timestamp1 = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    let entry1 = Create::new(payload1.clone(), 1000)
+    let entry1 = Create::text(payload1, 1000)
         .annotate_string("test_type", "First")
         .annotate_number("test_timestamp", timestamp1);
 
@@ -74,9 +74,9 @@ async fn test_entity_operations() -> Result<()> {
     log::info!("First entry created with ID: 0x{entry1_id:x}");
 
     // Create second entity
-    let payload2 = b"second entity".to_vec();
+    let payload2 = "second entity";
     let timestamp2 = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    let entry2 = Create::new(payload2.clone(), 1000)
+    let entry2 = Create::text(payload2, 1000)
         .annotate_string("test_type", "Second")
         .annotate_number("test_timestamp", timestamp2);
 
@@ -88,13 +88,13 @@ async fn test_entity_operations() -> Result<()> {
     let entry2_str = client.cat(entry2_id).await?;
     log::info!("Retrieved first entry 0x{entry1_id:x}: {entry1_str}");
     log::info!("Retrieved second entry 0x{entry2_id:x}: {entry2_str}");
-    assert_eq!(entry1_str, String::from_utf8(payload1)?);
-    assert_eq!(entry2_str, String::from_utf8(payload2)?);
+    assert_eq!(entry1_str, payload1);
+    assert_eq!(entry2_str, payload2);
 
     // Update first entity
-    let updated_payload = b"updated first entity".to_vec();
+    let updated_payload = "updated first entity";
     let updated_timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    let update = Update::new(entry1_id, updated_payload.clone(), 1000)
+    let update = Update::text(entry1_id, updated_payload, 1000)
         .annotate_string("test_type", "Updated")
         .annotate_number("test_timestamp", updated_timestamp);
 
@@ -104,7 +104,7 @@ async fn test_entity_operations() -> Result<()> {
     // Verify first entity was updated
     let updated_str = client.cat(entry1_id).await?;
     log::info!("Retrieved updated first entry 0x{entry1_id:x}: {updated_str}");
-    assert_eq!(updated_str, String::from_utf8(updated_payload.clone())?);
+    assert_eq!(updated_str, updated_payload);
 
     // Remove second entity
     client.remove_entries(account, vec![entry2_id]).await?;
@@ -126,7 +126,7 @@ async fn test_entity_operations() -> Result<()> {
     // Verify first entity still exists
     let final_str = client.cat(entry1_id).await?;
     log::info!("Retrieved final first entry 0x{entry1_id:x}: {final_str}");
-    assert_eq!(final_str, String::from_utf8(updated_payload)?);
+    assert_eq!(final_str, updated_payload);
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpServer};
+use arkiv_sdk::{ArkivClient, Hash, PrivateKeySigner, Url};
 use clap::Parser;
 use dirs::config_dir;
-use arkiv_sdk::{ArkivClient, Hash, PrivateKeySigner, Url};
 use sqlx::SqlitePool;
 use tokio::fs;
 

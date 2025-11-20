@@ -1,6 +1,6 @@
 use crate::entity::Hash;
 use crate::entity::{
-    Create, DeleteResult, EntityResult, Extend, ExtendResult, ArkivTransaction, Update,
+    ArkivTransaction, Create, DeleteResult, EntityResult, Extend, ExtendResult, Update,
 };
 use crate::ArkivClient;
 
@@ -28,7 +28,7 @@ pub enum Error {
 
 /// The Ethereum address of the Arkiv storage contract.
 /// All entity-related transactions are sent to this address.
-pub const STORAGE_ADDRESS: Address = address!("0x0000000000000000000000000000000060138453");
+pub const STORAGE_ADDRESS: Address = address!("0x00000000000000000000000000000061726B6976");
 
 impl ArkivClient {
     /// Creates one or more new entities in Arkiv and returns their results.
@@ -40,13 +40,15 @@ impl ArkivClient {
                 updates: vec![],
                 deletes: vec![],
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
             if log.topics().len() < 2 {
                 return None;
             }
-            let expiration_block = Self::parse_expiration_block(log.data().data.as_ref());
+            let expiration_block =
+                Self::parse_expiration_block(log.data().data.as_ref(), /*word_index=*/ 0);
             Some(EntityResult {
                 entity_key: log.topics()[1],
                 expiration_block,
@@ -64,13 +66,15 @@ impl ArkivClient {
                 updates,
                 deletes: vec![],
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
             if log.topics().len() < 2 {
                 return None;
             }
-            let expiration_block = Self::parse_expiration_block(log.data().data.as_ref());
+            let expiration_block =
+                Self::parse_expiration_block(log.data().data.as_ref(), /*word_index=*/ 1);
             Some(EntityResult {
                 entity_key: log.topics()[1],
                 expiration_block,
@@ -88,6 +92,7 @@ impl ArkivClient {
                 updates: vec![],
                 deletes,
                 extensions: vec![],
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
@@ -113,6 +118,7 @@ impl ArkivClient {
                 updates: vec![],
                 deletes: vec![],
                 extensions,
+                change_owners: vec![],
             })
             .await?;
         self.process_receipt(receipt, |log| {
@@ -120,8 +126,8 @@ impl ArkivClient {
             if log.topics().len() < 2 {
                 return None;
             }
-            let old_expiration_block = Self::parse_expiration_block(&data[..8]);
-            let new_expiration_block = Self::parse_expiration_block(&data[8..]);
+            let old_expiration_block = Self::parse_expiration_block(data, /*word_index=*/ 0);
+            let new_expiration_block = Self::parse_expiration_block(data, /*word_index=*/ 1);
             Some(ExtendResult {
                 entity_key: log.topics()[1],
                 old_expiration_block,
@@ -208,10 +214,14 @@ impl ArkivClient {
 
     /// Parses a single `u64` value from log data, padding the beginning with zeros if needed.
     /// Used to extract expiration block numbers from log data fields.
-    fn parse_expiration_block(data: &[u8]) -> u64 {
-        let mut padded_data = [0u8; 8];
-        let start = 8_usize.saturating_sub(data.len());
-        padded_data[start..].copy_from_slice(&data[..data.len().min(8)]);
-        u64::from_be_bytes(padded_data)
+    fn parse_expiration_block(data: &[u8], word_index: usize) -> u64 {
+        let start = word_index.saturating_mul(32);
+        if data.len() < start + 32 {
+            return 0;
+        }
+        let word = &data[start..start + 32];
+        let mut padded = [0u8; 8];
+        padded.copy_from_slice(&word[24..32]);
+        u64::from_be_bytes(padded)
     }
 }

@@ -1,9 +1,10 @@
-use alloy::primitives::B256;
+use alloy::primitives::{Bytes, B256};
 use std::sync::Arc;
 
 use crate::{
     block::{Block, Transaction, TransactionLog},
-    events::EntityEventHandler,
+    entity_db::Entity,
+    events::{EntityEventHandler, LogEvent},
 };
 
 /// Builder for modifying a block by adding logs and emitting events in a unified way.
@@ -23,21 +24,23 @@ impl BlockBuilder {
     }
 
     /// Add a log and emit the corresponding event for entity creation
-    pub async fn log_entity_created(
-        &mut self,
-        transaction: &Arc<Transaction>,
-        entity: &crate::entity_db::Entity,
-    ) {
+    pub async fn log_entity_created(&mut self, transaction: &Arc<Transaction>, entity: &Entity) {
+        let expiration_block = entity
+            .expires_at
+            .unwrap_or(self.block.header.block_number + entity.btl);
+        let payload = LogEvent::encode_creation_payload(expiration_block);
         // Emit event
         self.event_handler
             .on_entity_created(entity, &self.block, transaction)
             .await;
 
         // Create log and add to block
-        let create_log = TransactionLog::create_entity_log(
+        let create_log = TransactionLog::new_entity_log(
             transaction,
             arkiv_sdk::events::arkiv_storage_entity_created(),
             entity.key,
+            entity.owner,
+            payload,
         );
         self.block.transaction_logs.push(create_log);
 
@@ -54,18 +57,29 @@ impl BlockBuilder {
     pub async fn log_entity_updated(
         &mut self,
         transaction: &Arc<Transaction>,
-        entity: &crate::entity_db::Entity,
+        entity: &Entity,
+        old_expiration: u64,
+        new_expiration: u64,
     ) {
+        let payload = LogEvent::encode_update_payload(old_expiration, new_expiration);
         // Emit event
         self.event_handler
-            .on_entity_updated(entity, &self.block, transaction)
+            .on_entity_updated(
+                entity,
+                &self.block,
+                transaction,
+                old_expiration,
+                new_expiration,
+            )
             .await;
 
         // Create log and add to block
-        let update_log = TransactionLog::create_entity_log(
+        let update_log = TransactionLog::new_entity_log(
             transaction,
             arkiv_sdk::events::arkiv_storage_entity_updated(),
             entity.key,
+            entity.owner,
+            payload,
         );
         self.block.transaction_logs.push(update_log);
 
@@ -77,21 +91,19 @@ impl BlockBuilder {
     }
 
     /// Add a log and emit the corresponding event for entity removal
-    pub async fn log_entity_removed(
-        &mut self,
-        transaction: &Arc<Transaction>,
-        entity: &crate::entity_db::Entity,
-    ) {
+    pub async fn log_entity_removed(&mut self, transaction: &Arc<Transaction>, entity: &Entity) {
         // Emit event
         self.event_handler
             .on_entity_removed(entity, &self.block, transaction)
             .await;
 
         // Create log and add to block
-        let delete_log = TransactionLog::create_entity_log(
+        let delete_log = TransactionLog::new_entity_log(
             transaction,
             arkiv_sdk::events::arkiv_storage_entity_deleted(),
             entity.key,
+            entity.owner,
+            Bytes::new(),
         );
         self.block.transaction_logs.push(delete_log);
 
@@ -104,11 +116,7 @@ impl BlockBuilder {
     }
 
     /// Add a log and emit event for entity expiration (special case for expired entities)
-    pub async fn log_entity_expired(
-        &mut self,
-        transaction: &Arc<Transaction>,
-        entity: &crate::entity_db::Entity,
-    ) {
+    pub async fn log_entity_expired(&mut self, transaction: &Arc<Transaction>, entity: &Entity) {
         log::info!("Entity expired: 0x{:x}", entity.key);
         self.log_entity_removed(transaction, entity).await;
     }
@@ -118,20 +126,49 @@ impl BlockBuilder {
         &mut self,
         transaction: &Arc<Transaction>,
         entity_key: B256,
-        number_of_blocks: u64,
+        old_expiration: u64,
+        new_expiration: u64,
     ) {
+        let owner = transaction.from;
+        let payload = LogEvent::encode_extend_payload(old_expiration, new_expiration);
         // Create log and add to block
-        let extend_log = TransactionLog::create_entity_log(
+        let extend_log = TransactionLog::new_entity_log(
             transaction,
-            arkiv_sdk::events::arkiv_storage_entity_ttl_extended(),
+            arkiv_sdk::events::arkiv_storage_entity_btl_extended(),
             entity_key,
+            owner,
+            payload,
         );
         self.block.transaction_logs.push(extend_log);
 
         log::info!(
-            "Entity extended: 0x{:x}, new BTL: {}, tx: 0x{:x}",
+            "Entity extended: 0x{:x}, new expiration: {}, tx: 0x{:x}",
             entity_key,
-            number_of_blocks,
+            new_expiration,
+            transaction.hash
+        );
+    }
+
+    pub async fn log_entity_owner_changed(
+        &mut self,
+        transaction: &Arc<Transaction>,
+        entity: &Entity,
+    ) {
+        let old_owner = transaction.from;
+        let owner_change_log = TransactionLog::new_owner_change_log(
+            transaction,
+            arkiv_sdk::events::arkiv_storage_entity_owner_changed(),
+            entity.key,
+            old_owner,
+            entity.owner,
+        );
+        self.block.transaction_logs.push(owner_change_log);
+
+        log::info!(
+            "Entity owner changed: 0x{:x}, old: 0x{:x}, new: 0x{:x}, tx: 0x{:x}",
+            entity.key,
+            old_owner,
+            entity.owner,
             transaction.hash
         );
     }

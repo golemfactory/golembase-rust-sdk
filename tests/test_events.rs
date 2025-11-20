@@ -1,15 +1,14 @@
 use anyhow::Result;
-use futures::StreamExt;
 use arkiv_sdk::ArkivClient;
+use futures::StreamExt;
 use serial_test::serial;
 use std::time::Duration;
 
 use arkiv_sdk::entity::{Create, Update};
 use arkiv_sdk::events::Event;
 use arkiv_test_utils::{
-    cleanup_entities, create_test_account,
-    arkiv::{Config, ArkivContainer},
-    init_logger, TEST_TTL,
+    arkiv::{ArkivContainer, Config},
+    cleanup_entities, create_test_account, init_logger, TEST_TTL,
 };
 
 #[tokio::test]
@@ -28,7 +27,7 @@ async fn test_event_listening() -> Result<()> {
     let mut event_stream = events.events_stream().await.unwrap();
 
     // Create a test entity
-    let create = Create::from_string("test payload", TEST_TTL);
+    let create = Create::text("test payload", TEST_TTL);
     let entity_id = client.create_entry(account, create).await.unwrap();
 
     // Wait for and verify EntityCreated event
@@ -42,7 +41,7 @@ async fn test_event_listening() -> Result<()> {
     }
 
     // Update the entity
-    let update = Update::from_string(entity_id, "test payload", TEST_TTL);
+    let update = Update::text(entity_id, "test payload", TEST_TTL);
     client.update_entry(account, update).await.unwrap();
 
     // Wait for and verify EntityUpdated event
@@ -87,7 +86,7 @@ async fn test_event_listening_with_timeout() -> Result<()> {
     let mut event_stream = events.events_stream().await.unwrap();
 
     // Create a test entity
-    let create = Create::from_string("test payload", TEST_TTL);
+    let create = Create::text("test payload", TEST_TTL);
     let entity_id = client.create_entry(account, create).await.unwrap();
 
     // Wait for event with timeout

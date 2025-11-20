@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
-use bigdecimal::BigDecimal;
 use arkiv_sdk::client::ArkivClient;
 use arkiv_sdk::entity::Create;
+use bigdecimal::BigDecimal;
 
 /// Simple program to connect to a Geth node
 #[derive(Parser, Debug)]
@@ -109,7 +109,7 @@ async fn main() -> Result<()> {
 
     log::info!("Offer hash: {hash}");
     log::info!("Timestamp: {timestamp}");
-    let entry = Create::new(test_payload.clone(), 1000)
+    let entry = Create::text(entry_content.clone(), 1000)
         .annotate_string("golem_marketplace_type_test", "Offer")
         .annotate_string("golem_marketplace_id_test", hash)
         .annotate_number("golem_marketplace_timestamp_test", timestamp);

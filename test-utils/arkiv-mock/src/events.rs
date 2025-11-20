@@ -1,5 +1,5 @@
 use alloy::{
-    primitives::{Address, B256},
+    primitives::{Address, Bytes, B256},
     rpc::types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log},
 };
 use std::collections::HashMap;
@@ -9,8 +9,7 @@ use tokio::sync::{broadcast, RwLock};
 
 use arkiv_sdk::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
 use arkiv_sdk::events::{
-    arkiv_storage_entity_created, arkiv_storage_entity_deleted,
-    arkiv_storage_entity_updated,
+    arkiv_storage_entity_created, arkiv_storage_entity_deleted, arkiv_storage_entity_updated,
 };
 
 use crate::{
@@ -29,7 +28,7 @@ pub struct LogEvent {
     /// The entity ID (first indexed parameter)
     pub entity_id: B256,
     /// Additional data (second indexed parameter for some events)
-    pub additional_data: Option<B256>,
+    pub additional_topics: Option<B256>,
     /// The block number where the event occurred
     pub block_number: u64,
     /// The transaction hash that triggered the event
@@ -40,19 +39,53 @@ pub struct LogEvent {
     pub log_index: u64,
     /// The block hash
     pub block_hash: B256,
+    /// Unindexed event data payload
+    pub data: Bytes,
+}
+
+impl LogEvent {
+    fn encode_word(value: u64) -> [u8; 32] {
+        let mut word = [0u8; 32];
+        word[24..].copy_from_slice(&value.to_be_bytes());
+        word
+    }
+
+    pub fn encode_address(address: Address) -> B256 {
+        let mut word = [0u8; 32];
+        word[12..].copy_from_slice(address.as_slice());
+        B256::from(word)
+    }
+
+    pub fn encode_creation_payload(expiration_block: u64) -> Bytes {
+        let mut data = Vec::with_capacity(64);
+        data.extend_from_slice(&Self::encode_word(expiration_block));
+        data.extend_from_slice(&[0u8; 32]); // cost placeholder
+        Bytes::from(data)
+    }
+
+    pub fn encode_update_payload(old_expiration: u64, new_expiration: u64) -> Bytes {
+        let mut data = Vec::with_capacity(96);
+        data.extend_from_slice(&Self::encode_word(old_expiration));
+        data.extend_from_slice(&Self::encode_word(new_expiration));
+        data.extend_from_slice(&[0u8; 32]); // cost placeholder
+        Bytes::from(data)
+    }
+
+    pub fn encode_extend_payload(old_expiration: u64, new_expiration: u64) -> Bytes {
+        Self::encode_update_payload(old_expiration, new_expiration)
+    }
 }
 
 impl Into<Log> for LogEvent {
     fn into(self) -> Log {
         let mut topics = vec![self.topic];
         topics.push(self.entity_id);
-        if let Some(data) = self.additional_data {
+        if let Some(data) = self.additional_topics {
             topics.push(data);
         }
 
-        let inner =
-            alloy::primitives::Log::new(self.address, topics, alloy::primitives::Bytes::new())
-                .unwrap_or_else(|| alloy::primitives::Log::empty());
+        let inner = alloy::primitives::Log::new(self.address, topics, self.data.clone())
+            .unwrap_or_else(|| alloy::primitives::Log::empty());
 
         Log {
             inner,
@@ -84,7 +117,14 @@ pub struct EventFilter {
 #[async_trait::async_trait]
 pub trait EntityEventHandler: Send + Sync {
     async fn on_entity_created(&self, entity: &Entity, block: &Block, transaction: &Transaction);
-    async fn on_entity_updated(&self, entity: &Entity, block: &Block, transaction: &Transaction);
+    async fn on_entity_updated(
+        &self,
+        entity: &Entity,
+        block: &Block,
+        transaction: &Transaction,
+        old_expiration: u64,
+        new_expiration: u64,
+    );
     async fn on_entity_removed(&self, entity: &Entity, block: &Block, transaction: &Transaction);
     /// Finish processing a block and emit all collected logs with proper indices
     async fn finish_block(&self, block_number: u64);
@@ -326,35 +366,47 @@ impl EventEmitter {
 impl EntityEventHandler for EventEmitter {
     async fn on_entity_created(&self, entity: &Entity, block: &Block, transaction: &Transaction) {
         let transaction_index = block.find_transaction_index(&transaction.hash).unwrap_or(0);
+        let expiration_block = entity
+            .expires_at
+            .unwrap_or(block.header.block_number + entity.btl);
 
         let log_event = LogEvent {
             address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
             topic: arkiv_storage_entity_created(),
             entity_id: entity.key,
-            additional_data: None,
+            additional_topics: Some(LogEvent::encode_address(entity.owner)),
             block_number: block.header.block_number,
             transaction_hash: transaction.hash,
             transaction_index,
             log_index: 0, // Will be set correctly in add_pending_log
             block_hash: block.header.block_hash,
+            data: LogEvent::encode_creation_payload(expiration_block),
         };
 
         self.add_pending_log(log_event).await;
     }
 
-    async fn on_entity_updated(&self, entity: &Entity, block: &Block, transaction: &Transaction) {
+    async fn on_entity_updated(
+        &self,
+        entity: &Entity,
+        block: &Block,
+        transaction: &Transaction,
+        old_expiration: u64,
+        new_expiration: u64,
+    ) {
         let transaction_index = block.find_transaction_index(&transaction.hash).unwrap_or(0);
 
         let log_event = LogEvent {
             address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
             topic: arkiv_storage_entity_updated(),
             entity_id: entity.key,
-            additional_data: None,
+            additional_topics: Some(LogEvent::encode_address(entity.owner)),
             block_number: block.header.block_number,
             transaction_hash: transaction.hash,
             transaction_index,
             log_index: 0, // Will be set correctly in add_pending_log
             block_hash: block.header.block_hash,
+            data: LogEvent::encode_update_payload(old_expiration, new_expiration),
         };
 
         self.add_pending_log(log_event).await;
@@ -367,12 +419,13 @@ impl EntityEventHandler for EventEmitter {
             address: ARKIV_STORAGE_PROCESSOR_ADDRESS,
             topic: arkiv_storage_entity_deleted(),
             entity_id: entity.key,
-            additional_data: None,
+            additional_topics: Some(LogEvent::encode_address(entity.owner)),
             block_number: block.header.block_number,
             transaction_hash: transaction.hash,
             transaction_index,
             log_index: 0, // Will be set correctly in add_pending_log
             block_hash: block.header.block_hash,
+            data: Bytes::new(),
         };
 
         self.add_pending_log(log_event).await;

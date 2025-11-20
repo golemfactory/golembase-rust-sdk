@@ -252,7 +252,7 @@ impl Blockchain {
 
         // Try to decode the transaction data as an ArkivTransaction
         // This is the inverse of the encoding shown in send_db_transaction
-        match ArkivTransaction::decode(&mut transaction.data.as_ref()) {
+        match ArkivTransaction::decode_compressed(transaction.data.as_ref()) {
             Ok(arkiv_tx) => {
                 // Process creates
                 for (idx, create) in arkiv_tx.creates.into_iter().enumerate() {
@@ -271,13 +271,40 @@ impl Blockchain {
                 for update in &arkiv_tx.updates {
                     let entity_key = update.entity_key;
 
-                    // Update the entity directly in the database
-                    self.entity_db.update_entity(&entity_key, update).await;
+                    let old_entity =
+                        self.entity_db
+                            .get_entity(&entity_key)
+                            .await
+                            .ok_or(anyhow::anyhow!(
+                                "Entity 0x{entity_key:x} not found for update (tx: 0x{hash:x})",
+                                hash = transaction.hash
+                            ))?;
 
-                    // Add log and emit event
-                    if let Some(entity) = self.entity_db.get_entity(&entity_key).await {
-                        builder.log_entity_updated(transaction, &entity).await;
-                    }
+                    let updated_entity = self
+                        .entity_db
+                        .update_entity(&entity_key, update, builder.block.header.block_number)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Failed to update entity 0x{entity_key:x} (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    let old_expiration = old_entity.expires_at.ok_or(anyhow::anyhow!(
+                        "Entity 0x{entity_key:x} missing expiration before update (tx: 0x{hash:x})",
+                        hash = transaction.hash
+                    ))?;
+                    let new_expiration = updated_entity.expires_at.ok_or(anyhow::anyhow!(
+                        "Entity 0x{entity_key:x} missing expiration after update (tx: 0x{hash:x})",
+                        hash = transaction.hash
+                    ))?;
+                    builder
+                        .log_entity_updated(
+                            transaction,
+                            &updated_entity,
+                            old_expiration,
+                            new_expiration,
+                        )
+                        .await;
                 }
 
                 // Process extensions
@@ -285,13 +312,38 @@ impl Blockchain {
                     let entity_key = extend.entity_key;
                     let number_of_blocks = extend.number_of_blocks;
 
-                    // For extensions, we need to update the existing entity's BTL
-                    self.entity_db
-                        .update_entity_btl(&entity_key, number_of_blocks)
-                        .await;
+                    let old_entity =
+                        self.entity_db
+                            .get_entity(&entity_key)
+                            .await
+                            .ok_or(anyhow::anyhow!(
+                                "Entity 0x{entity_key:x} not found for extension (tx: 0x{hash:x})",
+                                hash = transaction.hash
+                            ))?;
 
-                    // Add log using BlockBuilder (no event for TTL extension)
-                    builder.log_entity_ttl_extended(transaction, entity_key, number_of_blocks);
+                    let updated_entity = self
+                        .entity_db
+                        .update_entity_btl(&entity_key, number_of_blocks)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Failed to extend entity 0x{entity_key:x} (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    let old_expiration = old_entity.expires_at.ok_or(anyhow::anyhow!(
+                        "Entity 0x{entity_key:x} missing expiration before extension (tx: 0x{hash:x})",
+                        hash = transaction.hash
+                    ))?;
+                    let new_expiration = updated_entity.expires_at.ok_or(anyhow::anyhow!(
+                        "Entity 0x{entity_key:x} missing expiration after extension (tx: 0x{hash:x})",
+                        hash = transaction.hash
+                    ))?;
+                    builder.log_entity_ttl_extended(
+                        transaction,
+                        entity_key,
+                        old_expiration,
+                        new_expiration,
+                    );
                 }
 
                 // Process deletes
@@ -307,6 +359,32 @@ impl Blockchain {
                             transaction.hash
                         );
                     }
+                }
+
+                // Process change owners
+                for change_owner in &arkiv_tx.change_owners {
+                    let entity_key = change_owner.entity_key;
+
+                    self.entity_db
+                        .get_entity(&entity_key)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Entity 0x{entity_key:x} not found for owner change (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    let updated_entity = self
+                        .entity_db
+                        .change_owner(&entity_key, change_owner.new_owner)
+                        .await
+                        .ok_or(anyhow::anyhow!(
+                            "Failed to change owner for entity 0x{entity_key:x} (tx: 0x{hash:x})",
+                            hash = transaction.hash
+                        ))?;
+
+                    builder
+                        .log_entity_owner_changed(transaction, &updated_entity)
+                        .await;
                 }
             }
             Err(e) => {

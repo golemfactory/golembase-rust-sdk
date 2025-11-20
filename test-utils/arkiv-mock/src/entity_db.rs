@@ -164,12 +164,30 @@ impl Entity {
                 true => Some(self.data.clone()),
                 false => None,
             },
+            content_type: match include_data.content_type {
+                true => Some("application/octet-stream".to_string()),
+                false => None,
+            },
             expires_at: match include_data.expiration {
                 true => self.expires_at,
                 false => None,
             },
             owner: match include_data.owner {
                 true => Some(self.owner),
+                false => None,
+            },
+            last_modified_at_block: match include_data.last_modified_at_block {
+                true => self
+                    .expires_at
+                    .map(|expires| expires.saturating_sub(self.btl)),
+                false => None,
+            },
+            transaction_index_in_block: match include_data.transaction_index_in_block {
+                true => None,
+                false => None,
+            },
+            operation_index_in_transaction: match include_data.operation_index_in_transaction {
+                true => None,
                 false => None,
             },
             string_annotations: match include_data.attributes {
@@ -202,8 +220,14 @@ impl From<&Entity> for SearchResult {
         Self {
             key: entity.key,
             value: Some(entity.data.clone()),
+            content_type: Some("application/octet-stream".to_string()),
             expires_at: Some(entity.expires_at.unwrap_or(0)),
             owner: Some(entity.owner),
+            last_modified_at_block: entity
+                .expires_at
+                .map(|expires| expires.saturating_sub(entity.btl)),
+            transaction_index_in_block: None,
+            operation_index_in_transaction: None,
             string_annotations: entity.string_annotations.clone(),
             numeric_annotations: entity.numeric_annotations.clone(),
         }
@@ -391,16 +415,24 @@ impl EntityDb {
     }
 
     /// Update an existing entity in the database with new data
-    /// Returns true if entity was updated, false if entity doesn't exist
-    pub async fn update_entity(&self, entity_key: &B256, update: &Update) -> bool {
+    /// Returns the updated entity if present
+    pub async fn update_entity(
+        &self,
+        entity_key: &B256,
+        update: &Update,
+        current_block: u64,
+    ) -> Option<Entity> {
         let mut state = self.state.write().await;
 
         if let Some(entity) = state.entities.get_mut(entity_key) {
             log::info!("Updating entity: key={}", entity_key);
             // Update the entity using the existing update method
             entity.update(update);
+            let new_expiration = current_block.saturating_add(entity.btl);
+            entity.expires_at = Some(new_expiration);
 
             // Get entity data to avoid borrowing conflicts
+            let entity = entity.clone();
             let entity_key = entity.key;
             let new_string_annotations = entity.string_annotations.clone();
             let new_numeric_annotations = entity.numeric_annotations.clone();
@@ -413,19 +445,41 @@ impl EntityDb {
                 &new_numeric_annotations,
             );
 
-            true
+            Some(entity.clone())
         } else {
             // Entity doesn't exist, ignore the update
-            false
+            None
         }
     }
 
     /// Update only the BTL of an existing entity
-    pub async fn update_entity_btl(&self, entity_key: &B256, new_btl: u64) {
+    pub async fn update_entity_btl(
+        &self,
+        entity_key: &B256,
+        number_of_blocks: u64,
+    ) -> Option<Entity> {
         let mut state = self.state.write().await;
 
         if let Some(entity) = state.entities.get_mut(entity_key) {
-            entity.btl = new_btl;
+            let old_expiration = entity.expires_at.unwrap_or(0);
+            let new_expiration = old_expiration.saturating_add(number_of_blocks);
+            entity.expires_at = Some(new_expiration);
+            entity.btl = entity.btl.saturating_add(number_of_blocks);
+            Some(entity.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Change the owner of an existing entity
+    pub async fn change_owner(&self, entity_key: &B256, new_owner: Address) -> Option<Entity> {
+        let mut state = self.state.write().await;
+
+        if let Some(entity) = state.entities.get_mut(entity_key) {
+            entity.owner = new_owner;
+            Some(entity.clone())
+        } else {
+            None
         }
     }
 
@@ -626,7 +680,7 @@ mod tests {
             .unwrap();
 
         // Create entity 1: user with high priority
-        let create1 = Create::new("user data 1".into(), 1000)
+        let create1 = Create::text("user data 1", 1000)
             .annotate_string("type", "user")
             .annotate_string("status", "active")
             .annotate_number("priority", 5u64)
@@ -636,7 +690,7 @@ mod tests {
         db.add_entity(entity1).await;
 
         // Create entity 2: admin with medium priority
-        let create2 = Create::new("admin data".into(), 2000)
+        let create2 = Create::text("admin data", 2000)
             .annotate_string("type", "admin")
             .annotate_string("status", "active")
             .annotate_number("priority", 3u64)
@@ -646,7 +700,7 @@ mod tests {
         db.add_entity(entity2).await;
 
         // Create entity 3: user with low priority, different owner
-        let create3 = Create::new("user data 2".into(), 500)
+        let create3 = Create::text("user data 2", 500)
             .annotate_string("type", "user")
             .annotate_string("status", "inactive")
             .annotate_number("priority", 1u64)

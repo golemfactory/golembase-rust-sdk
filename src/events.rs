@@ -14,27 +14,33 @@ use crate::account::ARKIV_STORAGE_PROCESSOR_ADDRESS;
 use crate::entity::Hash;
 
 /// Returns the event signature hash for entity creation logs.
-/// Used to identify `GolemBaseStorageEntityCreated` events in the blockchain logs.
+/// Used to identify `ArkivEntityCreated` events in the blockchain logs.
 pub fn arkiv_storage_entity_created() -> B256 {
-    keccak256(b"GolemBaseStorageEntityCreated(uint256,uint256)")
+    keccak256(b"ArkivEntityCreated(uint256,address,uint256,uint256)")
 }
 
 /// Returns the event signature hash for entity deletion logs.
-/// Used to identify `GolemBaseStorageEntityDeleted` events in the blockchain logs.
+/// Used to identify `ArkivEntityDeleted` events in the blockchain logs.
 pub fn arkiv_storage_entity_deleted() -> B256 {
-    keccak256(b"GolemBaseStorageEntityDeleted(uint256)")
+    keccak256(b"ArkivEntityDeleted(uint256,address)")
 }
 
 /// Returns the event signature hash for entity update logs.
-/// Used to identify `GolemBaseStorageEntityUpdated` events in the blockchain logs.
+/// Used to identify `ArkivEntityUpdated` events in the blockchain logs.
 pub fn arkiv_storage_entity_updated() -> B256 {
-    keccak256(b"GolemBaseStorageEntityUpdated(uint256,uint256)")
+    keccak256(b"ArkivEntityUpdated(uint256,address,uint256,uint256,uint256)")
 }
 
 /// Returns the event signature hash for TTL extension logs.
-/// Used to identify `GolemBaseStorageEntityBTLExtended` events in the blockchain logs.
-pub fn arkiv_storage_entity_ttl_extended() -> B256 {
-    keccak256(b"GolemBaseStorageEntityBTLExtended(uint256,uint256)")
+/// Used to identify `ArkivEntityBTLExtended` events in the blockchain logs.
+pub fn arkiv_storage_entity_btl_extended() -> B256 {
+    keccak256(b"ArkivEntityBTLExtended(uint256,address,uint256,uint256,uint256)")
+}
+
+/// Returns the event signature hash for owner change logs.
+/// Used to identify `ArkivEntityOwnerChanged` events in the blockchain logs.
+pub fn arkiv_storage_entity_owner_changed() -> B256 {
+    keccak256(b"ArkivEntityOwnerChanged(uint256,address,address)")
 }
 
 /// Represents an Arkiv event parsed from the blockchain log.
@@ -166,6 +172,8 @@ impl EventsClient {
                 arkiv_storage_entity_created(),
                 arkiv_storage_entity_updated(),
                 arkiv_storage_entity_deleted(),
+                arkiv_storage_entity_btl_extended(),
+                arkiv_storage_entity_owner_changed(),
             ])
     }
 
